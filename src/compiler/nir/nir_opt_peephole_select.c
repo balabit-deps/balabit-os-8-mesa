@@ -119,6 +119,8 @@ block_check_for_allowed_instrs(nir_block *block, unsigned *count,
          case nir_op_vec2:
          case nir_op_vec3:
          case nir_op_vec4:
+         case nir_op_vec8:
+         case nir_op_vec16:
             movelike = true;
             break;
 
@@ -304,9 +306,7 @@ nir_opt_peephole_select_impl(nir_function_impl *impl, unsigned limit,
    if (progress) {
       nir_metadata_preserve(impl, nir_metadata_none);
    } else {
-#ifndef NDEBUG
-      impl->valid_metadata &= ~nir_metadata_not_properly_reset;
-#endif
+      nir_metadata_preserve(impl, nir_metadata_all);
    }
 
    return progress;

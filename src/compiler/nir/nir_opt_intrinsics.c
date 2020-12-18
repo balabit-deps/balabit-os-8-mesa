@@ -86,6 +86,7 @@ opt_intrinsics_impl(nir_function_impl *impl,
                      nir_ssa_def_rewrite_uses(&alu->dest.dest.ssa,
                                               nir_src_for_ssa(new_expr));
                      nir_instr_remove(&alu->instr);
+                     progress = true;
                      continue;
                   }
                }
@@ -121,6 +122,8 @@ nir_opt_intrinsics(nir_shader *shader)
          progress = true;
          nir_metadata_preserve(function->impl, nir_metadata_block_index |
                                                nir_metadata_dominance);
+      } else {
+         nir_metadata_preserve(function->impl, nir_metadata_all);
       }
    }
 

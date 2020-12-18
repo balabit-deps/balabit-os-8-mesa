@@ -30,6 +30,7 @@ files_libintel_common = files(
   'gen_decoder.h',
   'gen_disasm.c',
   'gen_disasm.h',
+  'gen_gem.c',
   'gen_gem.h',
   'gen_guardband.h',
   'gen_l3_config.c',
@@ -42,8 +43,9 @@ files_libintel_common = files(
 libintel_common = static_library(
   ['intel_common', genX_xml_h],
   files_libintel_common,
-  include_directories : [inc_common, inc_intel],
-  c_args : [c_vis_args, no_override_init_args],
+  include_directories : [inc_include, inc_src, inc_mesa, inc_gallium, inc_intel],
+  c_args : [no_override_init_args],
+  gnu_symbol_visibility : 'hidden',
   link_with : [libisl],
   dependencies : [dep_expat, dep_libdrm, dep_thread, idep_genxml],
 )
@@ -67,10 +69,11 @@ if install_intel_gpu_tests
       'intel_@0@_mi_builder_test'.format(g[1]),
       files('tests/gen_mi_builder_test.cpp'),
       cpp_args : [
-        cpp_vis_args, cpp_msvc_compat_args,
+        cpp_msvc_compat_args,
         '-DGEN_VERSIONx10=@0@'.format(g[0])
       ],
-      include_directories : [inc_common, inc_intel],
+      gnu_symbol_visibility : 'hidden',
+      include_directories : [inc_include, inc_src, inc_intel],
       link_with : [libintel_dev],
       dependencies : [dep_libdrm, idep_gtest, idep_genxml, idep_mesautil],
       install : install_intel_gpu_tests,
@@ -97,7 +100,7 @@ if with_tests
     executable(
       'genxml_test',
       ['tests/genxml_test.c', gentest_pack],
-      include_directories : [inc_common, inc_intel],
+      include_directories : [inc_include, inc_src, inc_intel],
       dependencies : idep_mesautil,
       link_with : libintel_common,
       c_args : [

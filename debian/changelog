@@ -1,24 +1,130 @@
-mesa (20.0.8-0ubuntu1~20.04.1) focal; urgency=medium
+mesa (20.2.6-0ubuntu0.20.04.1) focal; urgency=medium
 
-  * Backport to focal.
-    - migrate to LLVM 10 (LP: #1882901)
-    - fix zwp_linux_dmabuf_v1 on wayland (LP: #1868520)
-  * control: Relax libclc-dev build-dep for the backport.
+  * New upstream bugfix release. (LP: #1908699)
 
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 12 Jun 2020 09:05:27 +0300
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 18 Dec 2020 10:35:45 +0200
 
-mesa (20.0.8-0ubuntu1) groovy; urgency=medium
+mesa (20.2.1-1~ubuntu0.20.04.2) focal; urgency=medium
+
+  * ppc64el-ftbfs-fix-type-collisions.diff: Fix build failure on ppc64el.
+    (LP: #1902244)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 07 Dec 2020 13:09:14 +0200
+
+mesa (20.2.1-1~ubuntu0.20.04.1) focal; urgency=medium
+
+  * Backport to focal. (LP: #1902244)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 19 Nov 2020 12:55:52 +0200
+
+mesa (20.2.1-1) unstable; urgency=medium
 
   * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 15 Oct 2020 12:38:36 +0300
+
+mesa (20.2.0-1) experimental; urgency=medium
+
+  * New upstream release.
+  * control: Add libclang-cpp11-dev to build-depends. (Closes: #954849)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 29 Sep 2020 11:07:13 +0300
+
+mesa (20.2.0~rc4-2) experimental; urgency=medium
+
+  * Migrate to llvm/clang-11.
+  * path_max.diff: Updated. (Closes: #969040)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 17 Sep 2020 12:07:08 +0300
+
+mesa (20.2.0~rc4-1) experimental; urgency=medium
+
+  * New upstream prerelease.
+  * rules: Move radv rule up to fix build on non-intel archs.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 04 Sep 2020 19:32:58 +0300
+
+mesa (20.2.0~rc2-1) experimental; urgency=medium
+
+  * New upstream release candidate.
+  * rules: Get rid of trailing commas in *_DRIVERS options.
+  * control: Bump libglvnd build-dep.
+  * Update mesa-common-dev.docs.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 14 Aug 2020 18:30:42 +0300
+
+mesa (20.1.9-1) unstable; urgency=medium
+
+  * New upstream release.
+  * control: Add libclang-cpp11-dev to build-depends. (Closes: #954849)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 01 Oct 2020 10:12:00 +0300
+
+mesa (20.1.8-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 17 Sep 2020 11:23:02 +0300
+
+mesa (20.1.7-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 04 Sep 2020 14:45:01 +0300
+
+mesa (20.1.6-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 27 Aug 2020 21:08:41 +0300
+
+mesa (20.1.5-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 10 Aug 2020 10:32:11 +0300
+
+mesa (20.1.4-1) unstable; urgency=medium
+
+  * New upstream release.
+  * fix-ppc64el.patch: Dropped, upstream.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 28 Jul 2020 15:59:19 +0300
+
+mesa (20.1.2-1) unstable; urgency=medium
+
+  * New upstream release. (Closes: #963677)
+  * mesa-vulkan-drivers: Add support for device-select-layer.
+  * control, rules: Enable valgrind where supported. (Closes: #890846)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 25 Jun 2020 10:24:29 +0300
+
+mesa (20.1.1-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 11 Jun 2020 11:06:50 +0300
+
+mesa (20.1.0-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 28 May 2020 13:14:52 +0300
+
+mesa (20.1.0~rc4-1) experimental; urgency=medium
+
+  * New upstream snapshot.
   * fix-build-with-llvm-10.diff: Dropped, upstream.
 
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 12 Jun 2020 09:04:34 +0300
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 22 May 2020 09:17:06 +0300
 
-mesa (20.0.7-1ubuntu1) groovy; urgency=medium
+mesa (20.1.0~rc1-1) experimental; urgency=medium
 
-  * Merge from Debian.
+  * New upstream snapshot.
+  * fix-build-with-llvm-10.diff: Refreshed.
+  * signing-key: Add key from Eric Engeström.
 
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 25 May 2020 13:02:32 +0300
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 05 May 2020 12:47:17 +0300
 
 mesa (20.0.7-1) unstable; urgency=medium
 
@@ -27,13 +133,6 @@ mesa (20.0.7-1) unstable; urgency=medium
     #960197)
 
  -- Timo Aaltonen <tjaalton@debian.org>  Fri, 22 May 2020 08:36:18 +0300
-
-mesa (20.0.6-3ubuntu1) groovy; urgency=medium
-
-  * Merge from Debian.
-  * control: Build with llvm-10.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 08 May 2020 12:50:14 +0300
 
 mesa (20.0.6-3) unstable; urgency=medium
 
@@ -61,15 +160,6 @@ mesa (20.0.6-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 05 May 2020 10:37:18 +0300
 
-mesa (20.0.4-2ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-  * disable-intel-ccs-compression.diff: Dropped, we use iris by default.
-    (LP: #1863874)
-  * Don't build with llvm-10 until ppc64el ftbfs is fixed.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 16 Apr 2020 09:22:34 +0300
-
 mesa (20.0.4-2) unstable; urgency=medium
 
   * fix-build-with-llvm-10.diff: Add a patch to fix build with Polly,
@@ -81,12 +171,6 @@ mesa (20.0.4-2) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 15 Apr 2020 10:16:24 +0300
 
-mesa (20.0.4-1ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 06 Apr 2020 08:55:45 +0300
-
 mesa (20.0.4-1) unstable; urgency=medium
 
   * New upstream release.
@@ -96,12 +180,6 @@ mesa (20.0.4-1) unstable; urgency=medium
   * source/local-options: Update extend-diff-ignore.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Sun, 05 Apr 2020 23:39:55 +0300
-
-mesa (20.0.2-1ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 25 Mar 2020 16:37:30 +0200
 
 mesa (20.0.2-1) unstable; urgency=medium
 
@@ -123,25 +201,12 @@ mesa (20.0.1-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Mon, 09 Mar 2020 17:40:08 +0200
 
-mesa (20.0.0-1ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 20 Feb 2020 11:09:59 +0200
-
 mesa (20.0.0-1) experimental; urgency=medium
 
   * New upstream release.
   * control: Use debhelper-compat, bump to 12.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 20 Feb 2020 10:46:06 +0200
-
-mesa (20.0.0~rc3-1ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-  * dont-enable-10bpc-by-default.diff: Dropped, gnome is fixed long ago.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 19 Feb 2020 11:39:27 +0200
 
 mesa (20.0.0~rc3-1) experimental; urgency=medium
 
@@ -175,12 +240,6 @@ mesa (20.0.0~git20200129-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 29 Jan 2020 09:29:20 +0200
 
-mesa (19.3.3-1ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 28 Jan 2020 21:57:20 +0200
-
 mesa (19.3.3-1) unstable; urgency=medium
 
   * New upstream release.
@@ -191,23 +250,11 @@ mesa (19.3.3-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 28 Jan 2020 21:45:02 +0200
 
-mesa (19.3.2-1ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 15 Jan 2020 15:24:05 +0200
-
 mesa (19.3.2-1) unstable; urgency=medium
 
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 15 Jan 2020 14:55:29 +0200
-
-mesa (19.3.1-4ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 08 Jan 2020 14:17:39 +0200
 
 mesa (19.3.1-4) unstable; urgency=medium
 
@@ -234,14 +281,6 @@ mesa (19.3.1-2) unstable; urgency=medium
   * rules: Build radv on mips/mipsel again.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 19 Dec 2019 23:17:58 +0200
-
-mesa (19.3.1-1ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-  * patches: Refreshed, i965-sync-pciids.diff dropped as it's applied
-    upstream.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 19 Dec 2019 21:00:23 +0200
 
 mesa (19.3.1-1) unstable; urgency=medium
 
@@ -286,14 +325,6 @@ mesa (19.2.6-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Fri, 29 Nov 2019 21:08:25 +0200
 
-mesa (19.2.4-1ubuntu1) focal; urgency=medium
-
-  * Merge from Debian.
-  * revert-set-full-thread-affinity.diff: Dropped, qemu is fixed now in
-    eoan and up. (LP: #1815889)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 20 Nov 2019 20:17:00 +0200
-
 mesa (19.2.4-1) unstable; urgency=medium
 
   * New upstream release. (Closes: #944880)
@@ -311,13 +342,6 @@ mesa (19.2.3-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 07 Nov 2019 14:01:26 +0200
 
-mesa (19.2.1-1ubuntu1) eoan; urgency=medium
-
-  * Merge from Debian.
-  * i965-sync-pciids.diff: Refreshed.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 10 Oct 2019 09:02:01 +0300
-
 mesa (19.2.1-1) unstable; urgency=medium
 
   [ Timo Aaltonen ]
@@ -333,19 +357,6 @@ mesa (19.2.1-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 10 Oct 2019 07:31:08 +0300
 
-mesa (19.2.0-1ubuntu2) eoan; urgency=medium
-
-  * i965-sync-pciids.diff: Add missing pci-id's, fix descriptions. (LP:
-    #1845317)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 02 Oct 2019 10:36:55 +0300
-
-mesa (19.2.0-1ubuntu1) eoan; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 01 Oct 2019 16:16:29 +0300
-
 mesa (19.2.0-1) unstable; urgency=medium
 
   * New upstream release.
@@ -355,14 +366,6 @@ mesa (19.2.0-1) unstable; urgency=medium
   * copyright: Don't refer to BSD license file.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 01 Oct 2019 15:49:52 +0300
-
-mesa (19.2.0~rc4-1ubuntu1) eoan; urgency=medium
-
-  * Merge from Debian experimental. (LP: #1844132)
-  * patches: Drop ICL backports, all upstream.
-  * patches: Refreshed.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 24 Sep 2019 11:22:41 +0300
 
 mesa (19.2.0~rc4-1) experimental; urgency=medium
 
@@ -401,43 +404,17 @@ mesa (19.2.0~rc1-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 21 Aug 2019 07:45:14 +0300
 
-mesa (19.1.6-1ubuntu1) eoan; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 05 Sep 2019 11:19:06 +0300
-
 mesa (19.1.6-1) unstable; urgency=medium
 
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 04 Sep 2019 15:43:36 +0300
 
-mesa (19.1.4-1ubuntu1) eoan; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 08 Aug 2019 07:46:48 +0300
-
 mesa (19.1.4-1) unstable; urgency=medium
 
   * New upstream release. (Closes: #933753, #933906)
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 08 Aug 2019 07:30:48 +0300
-
-mesa (19.1.2-1ubuntu2) eoan; urgency=medium
-
-  * i965-comet-lake.diff: Dropped, upstream.
-  * icl-backport.diff: Most of the diff is upstream, replace the rest
-    with three cherry-picks.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 24 Jul 2019 12:58:26 +0300
-
-mesa (19.1.2-1ubuntu1) eoan; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 22 Jul 2019 10:33:04 +0300
 
 mesa (19.1.2-1) unstable; urgency=medium
 
@@ -474,35 +451,6 @@ mesa (19.1.0-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 13 Jun 2019 10:52:07 +0300
 
-mesa (19.0.8-0ubuntu2) eoan; urgency=medium
-
-  * icl-backport.diff: Updated
-    - add new pci-id's
-    - mark gen11 support complete
-    - fix a workaround, revert another
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 03 Jul 2019 22:39:32 +0300
-
-mesa (19.0.8-0ubuntu1) eoan; urgency=medium
-
-  * New upstream bugfix release.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 27 Jun 2019 10:20:03 +0300
-
-mesa (19.0.7-0ubuntu1) eoan; urgency=medium
-
-  * New upstream bugfix release.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 25 Jun 2019 10:55:10 +0300
-
-mesa (19.0.5-0ubuntu1) eoan; urgency=medium
-
-  * New upstream bugfix release.
-  * icl-backport.diff: Backport support for fast color clears and
-    bugfixes for Ice Lake (LP: #1825940).
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 28 May 2019 11:54:16 +0300
-
 mesa (19.0.3-1) experimental; urgency=medium
 
   * New upstream release.
@@ -511,12 +459,6 @@ mesa (19.0.3-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 08 May 2019 13:46:47 +0300
 
-mesa (19.0.2-1ubuntu1) disco; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 11 Apr 2019 11:56:22 +0300
-
 mesa (19.0.2-1) experimental; urgency=medium
 
   * New upstream release.
@@ -524,30 +466,11 @@ mesa (19.0.2-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 11 Apr 2019 11:50:26 +0300
 
-mesa (19.0.1-1ubuntu2) disco; urgency=medium
-
-  * i965-comet-lake.diff: Add support for CML. (LP: #1821863)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 03 Apr 2019 10:58:06 +0300
-
-mesa (19.0.1-1ubuntu1) disco; urgency=medium
-
-  * Merge from Debian. (LP: #1822092)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 28 Mar 2019 15:51:31 +0200
-
 mesa (19.0.1-1) experimental; urgency=medium
 
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 28 Mar 2019 15:38:58 +0200
-
-mesa (19.0.0-1ubuntu1) disco; urgency=medium
-
-  * Merge from Debian. (LP: #1818516)
-  * revert-set-full-thread-affinity.diff: Fix qemu crash. (LP: #1815889)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 14 Mar 2019 18:48:18 +0200
 
 mesa (19.0.0-1) experimental; urgency=medium
 
@@ -621,23 +544,11 @@ mesa (18.3.4-2) unstable; urgency=medium
 
  -- Andreas Boll <aboll@debian.org>  Sat, 02 Mar 2019 13:21:59 +0100
 
-mesa (18.3.4-1ubuntu1) disco; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Feb 2019 11:42:32 +0200
-
 mesa (18.3.4-1) unstable; urgency=medium
 
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Feb 2019 11:02:44 +0200
-
-mesa (18.3.3-1ubuntu1) disco; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 07 Feb 2019 16:41:47 +0200
 
 mesa (18.3.3-1) unstable; urgency=medium
 
@@ -650,12 +561,6 @@ mesa (18.3.3-1) unstable; urgency=medium
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 06 Feb 2019 11:36:46 +0200
-
-mesa (18.3.2-1ubuntu1) disco; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 18 Jan 2019 11:39:28 +0200
 
 mesa (18.3.2-1) unstable; urgency=medium
 
@@ -724,13 +629,6 @@ mesa (18.3.0~rc4-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 29 Nov 2018 15:35:41 +0200
 
-mesa (18.2.8-2ubuntu1) disco; urgency=medium
-
-  * Merge from Debian.
-    - Re-enable libsensors support
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 03 Jan 2019 02:50:15 +0200
-
 mesa (18.2.8-2) unstable; urgency=medium
 
   * Actually merge the upstream version. (Closes: #917556)
@@ -755,19 +653,6 @@ mesa (18.2.7-1) unstable; urgency=medium
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 19 Dec 2018 11:47:32 +0200
-
-mesa (18.2.6-1ubuntu2) disco; urgency=medium
-
-  * Temporarily disable libsensors support to bootstrap with libsensors5.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 03 Jan 2019 02:34:40 +0200
-
-mesa (18.2.6-1ubuntu1) disco; urgency=medium
-
-  * Merge from Debian.
-    - add missing i965 pci-id's (LP: #1789924)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 28 Nov 2018 23:14:08 +0200
 
 mesa (18.2.6-1) unstable; urgency=medium
 
@@ -812,19 +697,6 @@ mesa (18.2.4-1) experimental; urgency=medium
   * copyright: Rewrite for format 1.0.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 15 Nov 2018 11:20:08 +0200
-
-mesa (18.2.2-0ubuntu1) cosmic; urgency=medium
-
-  * New upstream bugfix release. (LP: #1796367, #1794923)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 08 Oct 2018 14:23:09 +0300
-
-mesa (18.2.1-1ubuntu1) cosmic; urgency=medium
-
-  * Merge from Debian experimental. (LP: #1714178, #1792873)
-  * glvnd-fix-a-segfault-in-eglgetprocaddess.diff: Dropped, upstream.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 25 Sep 2018 23:26:15 +0300
 
 mesa (18.2.1-1) experimental; urgency=medium
 
@@ -903,12 +775,6 @@ mesa (18.1.6-1) unstable; urgency=medium
 
  -- Andreas Boll <aboll@debian.org>  Tue, 14 Aug 2018 09:28:56 +0200
 
-mesa (18.1.5-1ubuntu1) cosmic; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 30 Jul 2018 16:59:04 +0300
-
 mesa (18.1.5-1) unstable; urgency=medium
 
   * New upstream release.
@@ -925,23 +791,11 @@ mesa (18.1.4-1) unstable; urgency=medium
 
  -- Emilio Pozuelo Monfort <pochu@debian.org>  Sun, 15 Jul 2018 12:59:44 +0200
 
-mesa (18.1.3-1ubuntu1) cosmic; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 02 Jul 2018 11:27:54 +0300
-
 mesa (18.1.3-1) unstable; urgency=medium
 
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Mon, 02 Jul 2018 11:25:05 +0300
-
-mesa (18.1.2-1ubuntu1) cosmic; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 22 Jun 2018 08:34:53 +0300
 
 mesa (18.1.2-1) unstable; urgency=medium
 
@@ -949,25 +803,11 @@ mesa (18.1.2-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 19 Jun 2018 17:50:24 +0300
 
-mesa (18.1.1-1ubuntu1) cosmic; urgency=medium
-
-  * Merge from Debian.
-  * glvnd-fix-a-segfault-in-eglgetprocaddess.diff: Backport a commit to
-    fix a segfault. (LP: #1776499)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 13 Jun 2018 12:10:21 +0300
-
 mesa (18.1.1-1) unstable; urgency=medium
 
   * New upstream release. (Closes: #901342)
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 13 Jun 2018 11:46:04 +0300
-
-mesa (18.1.0-1ubuntu1) cosmic; urgency=medium
-
-  * Merge from Debian experimental.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 29 May 2018 10:31:32 +0300
 
 mesa (18.1.0-1) experimental; urgency=medium
 
@@ -991,12 +831,6 @@ mesa (18.0.5-1) unstable; urgency=medium
 
  -- Emilio Pozuelo Monfort <pochu@debian.org>  Mon, 04 Jun 2018 09:51:42 +0200
 
-mesa (18.0.4-1ubuntu1) cosmic; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 22 May 2018 11:07:50 +0300
-
 mesa (18.0.4-1) unstable; urgency=medium
 
   * New upstream release.
@@ -1017,20 +851,6 @@ mesa (18.0.3-1) unstable; urgency=medium
     dependency.
 
  -- Andreas Boll <aboll@debian.org>  Tue, 08 May 2018 10:42:07 +0200
-
-mesa (18.0.2-2ubuntu2) cosmic; urgency=medium
-
-  * control: libegl1-mesa-dev should pull the new libwayland-dev, update
-    dependency.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 07 May 2018 10:34:10 +0300
-
-mesa (18.0.2-2ubuntu1) cosmic; urgency=medium
-
-  * Merge from Debian experimental.
-  * Drop libwayland-egl-mesa again.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Sat, 05 May 2018 21:01:52 +0300
 
 mesa (18.0.2-2) unstable; urgency=medium
 
@@ -1064,21 +884,6 @@ mesa (18.0.0-1) experimental; urgency=medium
 
  -- Andreas Boll <aboll@debian.org>  Wed, 28 Mar 2018 13:04:01 +0200
 
-mesa (18.0.0~rc5-1ubuntu1) bionic; urgency=medium
-
-  [ Timo Aaltonen ]
-  * Merge from Debian experimental.
-  * Drop Mir EGL patches, they're not needed anymore.
-  * Revert dropping libwayland-egl-mesa for now, until the wayland FFE
-    is acked.
-  * dri3-reinstate-get_dri_screen-callback.diff: Dropped, upstream.
-
-  [ Daniel van Vugt ]
-  * Add disable-intel-ccs-compression.patch to avoid screen corruption
-    when logging into Xorg sessions (LP: #1753776)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 22 Mar 2018 09:29:44 +0200
-
 mesa (18.0.0~rc5-1) experimental; urgency=medium
 
   [ Andreas Boll ]
@@ -1092,36 +897,6 @@ mesa (18.0.0~rc5-1) experimental; urgency=medium
   * Drop libwayland-egl-mesa, which is now provided by src:wayland.
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Wed, 21 Mar 2018 20:05:23 +0100
-
-mesa (18.0.0~rc4-1ubuntu3) bionic; urgency=medium
-
-  * dont-enable-10bpc-by-default.diff: Replace the drirc hack, just flip
-    the default to not enable 10bpc configs by default for gallium drivers.
-    (LP: #1752123)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 28 Feb 2018 19:34:58 +0200
-
-mesa (18.0.0~rc4-1ubuntu2) bionic; urgency=medium
-
-  * control: Remove libtxc-* Recommends which were left over after a
-    merge.
-  * dont-expose-10bpc-to-gnome-shell.diff: Add a workaround to not use
-    10bit RGB config with gnome-shell, until mutter is fixed. (LP:
-    #1752123)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 28 Feb 2018 13:55:43 +0200
-
-mesa (18.0.0~rc4-1ubuntu1) bionic; urgency=medium
-
-  * Merge with Debian experimental.
-  * Stop using alternatives, not needed anymore with libglvnd.
-  * patches: Mir patches updated.
-  * dri3-reinstate-get_dri_screen-callback.diff: Fix a regression in
-    accelerated video playback. (LP: #1747744)
-  * control: Add nvidia-304/340/384 to libegl-mesa0, libgles2-mesa and
-    libglx-mesa0 Breaks.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 13 Feb 2018 17:56:35 +0200
 
 mesa (18.0.0~rc4-1) experimental; urgency=medium
 
@@ -1332,165 +1107,6 @@ mesa (17.2.0~rc4-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 15 Aug 2017 09:44:24 +0300
 
-mesa (17.3.3-0ubuntu1) bionic; urgency=medium
-
-  * New upstream release.
-  * patches: Drop upstreamed patch, refresh egl-platform-mir.patch.
-  * rules: Fix disabling omx.
-  * libgbm1.symbols: Updated.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 26 Jan 2018 14:45:02 +0200
-
-mesa (17.2.4-0ubuntu2) bionic; urgency=medium
-
-  * Import changes from 17.2.2-0ubuntu2
-  * Make mesa-va-drivers enhance libva2 rather than libva1.
-  * vulkan-mir.patch: Dropped, breaks radeon vulkan driver. (LP: #1720890)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 08 Nov 2017 16:29:58 +0200
-
-mesa (17.2.4-0ubuntu1) bionic; urgency=medium
-
-  * New upstream bugfix release. (LP: #1727390)
-  * i965-disable-l3-cache-alloc-for-ext-buffers.diff: Fix corruption
-    running windowed 3D apps on dGPU. (LP: #1727401)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 07 Nov 2017 15:36:09 +0200
-
-mesa (17.2.2-0ubuntu2) bionic; urgency=medium
-
-  [ Andreas Boll ]
-  * Build with dh_libva (Closes: #879064).
-
- -- Jeremy Bicha <jbicha@ubuntu.com>  Sat, 04 Nov 2017 15:43:28 -0400
-
-mesa (17.2.2-0ubuntu1) artful; urgency=medium
-
-  * New upstream bugfix release.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 03 Oct 2017 15:49:38 +0300
-
-mesa (17.2.1-0ubuntu1) artful; urgency=medium
-
-  * New upstream bugfix release. (LP: #1716250)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 18 Sep 2017 14:42:16 +0300
-
-mesa (17.2.0-0ubuntu1) artful; urgency=medium
-
-  * New upstream release.
-  * control, rules: Bump llvm/clang to 5.0, and libclc to match.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 05 Sep 2017 16:24:49 +0300
-
-mesa (17.2.0~rc4-0ubuntu3) artful; urgency=medium
-
-  * control: Build libxatracker* only on x86.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 15 Aug 2017 15:52:41 +0300
-
-mesa (17.2.0~rc4-0ubuntu2) artful; urgency=medium
-
-  * rules: Build gallium/svga only on x86.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 15 Aug 2017 15:26:38 +0300
-
-mesa (17.2.0~rc4-0ubuntu1) artful; urgency=medium
-
-  * Migrate mesa to build against libglvnd:
-    + patches:
-      - Fix gl.pc
-    + control:
-      - Add libglvnd-core-dev to build-depends
-      - Drop libgles2-mesa, provide a transitional package which
-        depends on libgles2
-    + control, install, symbols, lintian-overrides:
-      - Drop libegl1-mesa, libgl1-mesa-glx, add libegl-mesa0, libglx-mesa0,
-        provide transitional packages for libegl1-mesa, libgl1-mesa-glx
-      - Replace depends on libegl1-mesa with libegl1 or libglvnd-dev
-      - Add Provides: libegl-vendor to libegl-mesa0 and libglx-vendor to
-        libglx-mesa0
-    + control, lib{,e}gl1-mesa-dev.install:
-      - Drop .so files, provided by libglvnd-dev now
-      - Depend on libglvnd-dev instead of libegl1-mesa/libgl1-mesa-glx
-    + rules:
-      - Add --enable-libglvnd
-      - GLESv2 libs still get built, purge them from debian/tmp
-      - Remove lib{EGL,GLX}_mesa.so which are not needed for anything
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 15 Aug 2017 09:44:24 +0300
-
-mesa (17.3.3-0ubuntu1) bionic; urgency=medium
-
-  * New upstream release.
-  * patches: Drop upstreamed patch, refresh egl-platform-mir.patch.
-  * rules: Fix disabling omx.
-  * libgbm1.symbols: Updated.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 26 Jan 2018 14:45:02 +0200
-
-mesa (17.2.4-0ubuntu2) bionic; urgency=medium
-
-  * Import changes from 17.2.2-0ubuntu2
-  * Make mesa-va-drivers enhance libva2 rather than libva1.
-  * vulkan-mir.patch: Dropped, breaks radeon vulkan driver. (LP: #1720890)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 08 Nov 2017 16:29:58 +0200
-
-mesa (17.2.4-0ubuntu1) bionic; urgency=medium
-
-  * New upstream bugfix release. (LP: #1727390)
-  * i965-disable-l3-cache-alloc-for-ext-buffers.diff: Fix corruption
-    running windowed 3D apps on dGPU. (LP: #1727401)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 07 Nov 2017 15:36:09 +0200
-
-mesa (17.2.2-0ubuntu2) bionic; urgency=medium
-
-  [ Andreas Boll ]
-  * Build with dh_libva (Closes: #879064).
-
- -- Jeremy Bicha <jbicha@ubuntu.com>  Sat, 04 Nov 2017 15:43:28 -0400
-
-mesa (17.2.2-0ubuntu1) artful; urgency=medium
-
-  * New upstream bugfix release.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 03 Oct 2017 15:49:38 +0300
-
-mesa (17.2.1-0ubuntu1) artful; urgency=medium
-
-  * New upstream bugfix release. (LP: #1716250)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 18 Sep 2017 14:42:16 +0300
-
-mesa (17.2.0-0ubuntu1) artful; urgency=medium
-
-  * New upstream release.
-  * control, rules: Bump llvm/clang to 5.0, and libclc to match.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 05 Sep 2017 16:24:49 +0300
-
-mesa (17.2.0~rc4-0ubuntu3) artful; urgency=medium
-
-  * control: Build libxatracker* only on x86.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 15 Aug 2017 15:52:41 +0300
-
-mesa (17.2.0~rc4-0ubuntu2) artful; urgency=medium
-
-  * rules: Build gallium/svga only on x86.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 15 Aug 2017 15:26:38 +0300
-
-mesa (17.2.0~rc4-0ubuntu1) artful; urgency=medium
-
-  * New upstream release candidate.
-  * Merge from Debian.
-  * patches: Refresh Mir support patches.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 15 Aug 2017 10:28:24 +0300
-
 mesa (17.2.0~rc3-1) experimental; urgency=medium
 
   * New upstream release candidate.
@@ -1511,13 +1127,6 @@ mesa (17.1.5-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 25 Jul 2017 09:04:49 +0300
 
-mesa (17.1.4-1ubuntu1) artful; urgency=medium
-
-  * Merge from Debian.
-    - update/refresh Mir patches
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 03 Jul 2017 19:04:38 +0300
-
 mesa (17.1.4-1) unstable; urgency=medium
 
   * New upstream release.
@@ -1536,21 +1145,6 @@ mesa (17.1.3-1) experimental; urgency=medium
 
  -- Emilio Pozuelo Monfort <pochu@debian.org>  Mon, 26 Jun 2017 00:03:57 +0200
 
-mesa (17.1.2-2ubuntu2) artful; urgency=medium
-
-  * egl-platform-mir.patch
-  * egl-platform-rs.patch
-    - Fix configure.ac so that the Mir EGL platforms are actually
-      built. (LP: #1526658) (LP: #1696797)
-
- -- Christopher James Halse Rogers <raof@ubuntu.com>  Fri, 16 Jun 2017 17:51:50 +1000
-
-mesa (17.1.2-2ubuntu1) artful; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 13 Jun 2017 10:57:29 +0300
-
 mesa (17.1.2-2) experimental; urgency=medium
 
   * rules: --with-egl-platforms is deprecated, use --with-platforms
@@ -1558,13 +1152,6 @@ mesa (17.1.2-2) experimental; urgency=medium
   * rules: Enable surfaceless EGL platform.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 13 Jun 2017 10:50:33 +0300
-
-mesa (17.1.2-1ubuntu1) artful; urgency=medium
-
-  * Merge from Debian.
-  * Refresh patches.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 07 Jun 2017 13:24:07 +0300
 
 mesa (17.1.2-1) experimental; urgency=medium
 
@@ -1575,14 +1162,6 @@ mesa (17.1.2-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 07 Jun 2017 10:32:08 +0300
 
-mesa (17.1.0-1ubuntu1) artful; urgency=medium
-
-  * Merge from Debian.
-  * i915-dont-default-to-2.1.patch: Dropped, implemented upstream.
-  * Refresh patches.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 12 May 2017 16:35:35 +0300
-
 mesa (17.1.0-1) experimental; urgency=medium
 
   * New upstream release.
@@ -1592,29 +1171,11 @@ mesa (17.1.0-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 11 May 2017 09:59:50 +0300
 
-mesa (17.0.5-0ubuntu1) artful; urgency=medium
-
-  * New upstream bugfix release. (LP: #1686344)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 04 May 2017 20:07:36 +0300
-
-mesa (17.0.4-1ubuntu1) artful; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 26 Apr 2017 11:01:18 +0300
-
 mesa (17.0.4-1) experimental; urgency=medium
 
   * New upstrem release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 19 Apr 2017 16:14:20 +0300
-
-mesa (17.0.3-1ubuntu1) zesty; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 03 Apr 2017 19:03:10 +0300
 
 mesa (17.0.3-1) experimental; urgency=medium
 
@@ -1622,22 +1183,6 @@ mesa (17.0.3-1) experimental; urgency=medium
   * Update d/upstream/signing-key.asc with key from Andres Gomez.
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Mon, 03 Apr 2017 11:35:58 +0200
-
-mesa (17.0.2-1ubuntu2) zesty; urgency=medium
-
-  [ Cemil Azizoglu ]
-  * egl-platform-rs.patch: Add support for Mir's new render surface based
-    EGL driver
-  * khr_platform_mir.patch: Add EGL_KHR_platform_mir
-  * vulkan-mir.patch: Add Vulkan WSI driver for Mir
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 28 Mar 2017 19:22:29 +0300
-
-mesa (17.0.2-1ubuntu1) zesty; urgency=medium
-
-  * Merge from Debian experimental.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 21 Mar 2017 13:36:51 +0200
 
 mesa (17.0.2-1) experimental; urgency=medium
 
@@ -1650,13 +1195,6 @@ mesa (17.0.2-1) experimental; urgency=medium
     - Enables OpenCL support.
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Tue, 21 Mar 2017 11:35:09 +0100
-
-mesa (17.0.1-1ubuntu1) zesty; urgency=medium
-
-  * Merge from Debian.
-    - enable llvmpipe on ppc64el (LP: #1489483)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 10 Mar 2017 14:25:48 +0200
 
 mesa (17.0.1-1) experimental; urgency=medium
 
@@ -1674,20 +1212,6 @@ mesa (17.0.1-1) experimental; urgency=medium
     - Enables OpenCL support.
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Mon, 06 Mar 2017 15:15:00 +0100
-
-mesa (17.0.0-1ubuntu1) zesty; urgency=medium
-
-  [ Timo Aaltonen ]
-  * Merge from Debian.
-  * Drop patches for 16k wide textures on i965, upstream.
-
-  [ Cemil Azizoglu ]
-  * Updated egl-platform-mir.patch.
-    - remove device_name field (removed from the generic struct in the
-      upstream and made wayland specific).
-    - Change MirSurfaceParameters into MirWindowParameters.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 13 Feb 2017 16:19:39 +0200
 
 mesa (17.0.0-1) experimental; urgency=medium
 
@@ -1758,14 +1282,6 @@ mesa (13.0.5-1) unstable; urgency=medium
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Tue, 21 Feb 2017 13:13:50 +0100
 
-mesa (13.0.4-1ubuntu1) zesty; urgency=medium
-
-  * Merge from debian.
-  * radeonsi-always-leave-poly-offset-in-a-valid-state.diff:
-    Dropped, upstream.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 06 Feb 2017 09:47:24 +0200
-
 mesa (13.0.4-1) unstable; urgency=medium
 
   * New upstream release.
@@ -1777,31 +1293,6 @@ mesa (13.0.4-1) unstable; urgency=medium
   * Update extend-diff-ignore.
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Wed, 01 Feb 2017 15:36:10 +0100
-
-mesa (13.0.3-1ubuntu3) zesty; urgency=medium
-
-  * control: Add dh-autoreconf back to build-deps, for backports.
-  * radeonsi-always-leave-poly-offset-in-a-valid-state.diff:
-    Fix fdo#99451.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 19 Jan 2017 18:59:24 +0200
-
-mesa (13.0.3-1ubuntu2) zesty; urgency=medium
-
-  * rules: Drop forcing -O2 to fix ppc64el ftbfs, gcc got fixed already.
-    (LP: #1605796)
-  * control: Fix dependencies for ubuntuBSD. (LP: #1565080)
-  * compat,rules: Don't bump compat to 10, breaks applying patches
-    before autoreconf which we need for the Mir EGL platform.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 12 Jan 2017 09:49:20 +0200
-
-mesa (13.0.3-1ubuntu1) zesty; urgency=medium
-
-  * Merge from Debian.
-  * intel: Add patches to support 16k textures. (LP: #1655556)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 11 Jan 2017 09:45:19 +0200
 
 mesa (13.0.3-1) unstable; urgency=medium
 
@@ -1843,12 +1334,6 @@ mesa (13.0.2-2) unstable; urgency=medium
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Thu, 15 Dec 2016 15:16:56 +0100
 
-mesa (13.0.2-1ubuntu1) zesty; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 29 Nov 2016 18:15:09 +0200
-
 mesa (13.0.2-1) unstable; urgency=medium
 
   * New upstream release.
@@ -1866,14 +1351,6 @@ mesa (13.0.1-2) unstable; urgency=medium
   * Enable HUD lmsensors support.
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Mon, 28 Nov 2016 13:32:31 +0100
-
-mesa (13.0.1-1ubuntu1) zesty; urgency=medium
-
-  * Merge from Debian experimental.
-  * dri3-fix-totem-with-libva.diff: Dropped, upstream.
-  * egl-platform-mir.patch: Refreshed.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 23 Nov 2016 16:36:34 +0200
 
 mesa (13.0.1-1) experimental; urgency=medium
 
@@ -1913,14 +1390,6 @@ mesa (13.0.0~rc2-1) experimental; urgency=medium
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Tue, 25 Oct 2016 10:59:08 +0200
 
-mesa (12.0.4-2ubuntu1) zesty; urgency=medium
-
-  * Merge from Debian
-    - New upstream bugfix release. (LP: #1641017)
-  * dri3-fix-totem-with-libva.diff: Dropped, upstream.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 23 Nov 2016 14:04:45 +0200
-
 mesa (12.0.4-2) unstable; urgency=medium
 
   * Limit new glx symbols to !hurd-any. Should fix FTBFS on hurd.
@@ -1953,36 +1422,12 @@ mesa (12.0.3-2) unstable; urgency=medium
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Fri, 21 Oct 2016 09:49:37 +0200
 
-mesa (12.0.3-1ubuntu2) yakkety; urgency=medium
-
-  * dri3-fix-totem-with-libva.diff: Fix apps crashing when libva is
-    being used with dri3.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 06 Oct 2016 11:58:42 +0300
-
-mesa (12.0.3-1ubuntu1) yakkety; urgency=medium
-
-  * Merge from Debian.
-
-  [ Christopher James Halse Rogers ]
-  * egl-platform-mir.patch: Updated for upstream changes to dri2_initialize
-    in egl_dri2.c. (LP: #1620934, #1620994)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 16 Sep 2016 10:07:05 +0300
-
 mesa (12.0.3-1) unstable; urgency=medium
 
   * New upstream release.
   * Enable vc4 on arm64.
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Thu, 15 Sep 2016 13:38:40 +0200
-
-mesa (12.0.2-1ubuntu1) yakkety; urgency=medium
-
-  * Merge from Debian.
-  * install.in: Modify a bit to be more in line with Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 06 Sep 2016 15:05:17 +0300
 
 mesa (12.0.2-1) unstable; urgency=medium
 
@@ -2003,19 +1448,6 @@ mesa (12.0.2-1) unstable; urgency=medium
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Tue, 06 Sep 2016 10:37:23 +0200
 
-mesa (12.0.1-3ubuntu2) yakkety; urgency=medium
-
-  * debian/rules: Work around gcc ICE on ppc64el by forcing -O2.
-
- -- Adam Conrad <adconrad@ubuntu.com>  Fri, 22 Jul 2016 16:46:48 -0600
-
-mesa (12.0.1-3ubuntu1) yakkety; urgency=medium
-
-  * egl-platform-mir.patch: Don't enable support for ABGR8888. (LP:
-    #1473901)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 18 Jul 2016 11:36:21 +0300
-
 mesa (12.0.1-3) experimental; urgency=medium
 
   * rules, control: Build mesa-vulkan-drivers only on linux-
@@ -2032,14 +1464,6 @@ mesa (12.0.1-2) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Mon, 18 Jul 2016 11:45:01 +0300
 
-mesa (12.0.1-1ubuntu1) yakkety; urgency=medium
-
-  * Merge from debian experimental.
-  * Rebase Mir egl platform patch.
-  * Re-enable llvm on ppc64el to see if unity tests work.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 18 Jul 2016 08:37:54 +0300
-
 mesa (12.0.1-1) experimental; urgency=medium
 
   * New upstream release candidate.
@@ -2054,12 +1478,6 @@ mesa (12.0.1-1) experimental; urgency=medium
   * control, rules: Enable llvm/opencl on arm64. (LP: #1585942)
 
  -- Timo Aaltonen <tjaalton@debian.org>  Sat, 16 Jul 2016 13:03:04 +0300
-
-mesa (11.2.2-1ubuntu1) yakkety; urgency=medium
-
-  * Merge from debian. (LP: #1549849)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 13 May 2016 07:34:30 +0300
 
 mesa (11.2.2-1) unstable; urgency=medium
 
@@ -2076,31 +1494,12 @@ mesa (11.2.1-2) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Mon, 09 May 2016 15:17:24 +0300
 
-mesa (11.2.1-1ubuntu1) yakkety; urgency=medium
-
-  * Merge from Debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 21 Apr 2016 00:13:44 +0300
-
 mesa (11.2.1-1) experimental; urgency=medium
 
   * New upstream release.
   * control, rules: Use llvm/clang 3.8.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Mon, 18 Apr 2016 11:25:00 +0300
-
-mesa (11.2.0-1ubuntu2) xenial; urgency=medium
-
-  * control, rules: Enable mesa-opencl-icd now that the archive reorg
-    allows to build-depend on packages from universe. (LP: #1319835)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 14 Apr 2016 14:20:56 +0300
-
-mesa (11.2.0-1ubuntu1) xenial; urgency=medium
-
-  * Merge from debian. (LP: #1481832. #1548845)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 05 Apr 2016 10:19:51 +0300
 
 mesa (11.2.0-1) experimental; urgency=medium
 
@@ -2151,20 +1550,6 @@ mesa (11.1.3-1) unstable; urgency=medium
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Mon, 18 Apr 2016 19:04:40 +0200
 
-mesa (11.1.2-1ubuntu2) xenial; urgency=medium
-
-  * debian/patches/glibc2.23-pthreads-compat.patch: fix misuse of
-    pthread_barrier API.  Closes LP: #1559842.
-
- -- Steve Langasek <steve.langasek@ubuntu.com>  Mon, 21 Mar 2016 05:59:56 +0000
-
-mesa (11.1.2-1ubuntu1) xenial; urgency=medium
-
-  * Merge from Debian.
-  * control, rules: Use llvm-3.8 for OpenGL 4.1 support. (LP: #1535500)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 09 Feb 2016 13:40:00 +0200
-
 mesa (11.1.2-1) unstable; urgency=medium
 
   * New upstream release.
@@ -2177,20 +1562,6 @@ mesa (11.1.1-2) unstable; urgency=medium
     arch=!hurd-any (Fixes FTBFS on hurd).
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Fri, 15 Jan 2016 18:44:52 +0100
-
-mesa (11.1.1-1ubuntu2) xenial; urgency=medium
-
-  * Remove architecture restrictions on Mir EGL platform;
-    Mir is now built everywhere.
-
- -- Christopher James Halse Rogers <raof@ubuntu.com>  Thu, 21 Jan 2016 17:07:05 -0600
-
-mesa (11.1.1-1ubuntu1) xenial; urgency=medium
-
-  * Merge from Debian.
-  * patches: Refreshed.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 04 Dec 2015 12:40:46 +0200
 
 mesa (11.1.1-1) experimental; urgency=medium
 
@@ -2225,24 +1596,11 @@ mesa (11.1.0~rc3-1) experimental; urgency=medium
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Thu, 10 Dec 2015 12:22:54 +0100
 
-mesa (11.0.8-1ubuntu1) xenial; urgency=medium
-
-  * Merge from debian.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 22 Dec 2015 16:59:55 +0200
-
 mesa (11.0.8-1) unstable; urgency=medium
 
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 22 Dec 2015 16:12:35 +0200
-
-mesa (11.0.7-1ubuntu1) xenial; urgency=medium
-
-  * Merge from Debian.
-    - new bugfix release
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 10 Dec 2015 14:35:28 +0200
 
 mesa (11.0.7-1) unstable; urgency=medium
 
@@ -2255,13 +1613,6 @@ mesa (11.0.7-1) unstable; urgency=medium
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Wed, 09 Dec 2015 21:18:17 +0100
 
-mesa (11.0.6-1ubuntu1) xenial; urgency=medium
-
-  * Merge from Debian.
-    - new bugfix release
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 30 Nov 2015 16:24:08 +0200
-
 mesa (11.0.6-1) unstable; urgency=medium
 
   * New upstream release.
@@ -2272,37 +1623,12 @@ mesa (11.0.6-1) unstable; urgency=medium
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Fri, 27 Nov 2015 08:59:30 +0100
 
-mesa (11.0.5-1ubuntu2) xenial; urgency=medium
-
-  * debian/{rules,control}: Duplicate ppc/arm64 Mir disabling for s390x.
-
- -- Adam Conrad <adconrad@ubuntu.com>  Tue, 24 Nov 2015 00:08:47 -0700
-
-mesa (11.0.5-1ubuntu1) xenial; urgency=medium
-
-  * Merge from Debian.
-    - new upstream bugfix release
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 12 Nov 2015 16:49:01 +0200
-
 mesa (11.0.5-1) unstable; urgency=medium
 
   * New upstream release.
   * Add myself to Uploaders.
 
  -- Andreas Boll <andreas.boll.dev@gmail.com>  Thu, 12 Nov 2015 11:55:02 +0100
-
-mesa (11.0.4-1ubuntu1) xenial; urgency=medium
-
-  [ Timo Aaltonen ]
-  * Merge from Debian.
-  * patches: Dropped patches included in this release, fix Mir patch
-    FTBFS. (LP: #1509005)
-
-  [ Christopher James Halse Rogers ]
-  * patches: Fix Mir patch harder.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 28 Oct 2015 07:58:56 +0200
 
 mesa (11.0.4-1) unstable; urgency=medium
 
@@ -2314,34 +1640,6 @@ mesa (11.0.4-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Mon, 26 Oct 2015 10:30:04 +0200
 
-mesa (11.0.2-1ubuntu4) wily; urgency=medium
-
-  * core-fix-EXT_texture_format_BGRA8888.patch: Cherry pick upstream commit
-    fixing incorrectly-strict error handling in format code. Fixes black
-    windows in Weston and Mir (LP: #1504387)
-
- -- Christopher James Halse Rogers <raof@ubuntu.com>  Fri, 09 Oct 2015 14:45:54 +1100
-
-mesa (11.0.2-1ubuntu3) wily; urgency=medium
-
-  * d/patches/egl-platform-mir.patch: add mirclient dependency (LP: #1503450)
-
- -- Tiago Stürmer Daitx <tiago.daitx@canonical.com>  Tue, 06 Oct 2015 22:05:12 +0000
-
-mesa (11.0.2-1ubuntu2) wily; urgency=medium
-
-  * control, rules: Disable LLVM on ppc64el again, until unity tests
-    pass with it.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 02 Oct 2015 15:45:56 +0300
-
-mesa (11.0.2-1ubuntu1) wily; urgency=medium
-
-  * Merge from debian.
-    - new upstream bugfix release
-
- -- Timo Aaltonen <tjaalton@debian.org>  Wed, 30 Sep 2015 15:19:09 +0300
-
 mesa (11.0.2-1) experimental; urgency=medium
 
   [ Andreas Boll ]
@@ -2352,17 +1650,6 @@ mesa (11.0.2-1) experimental; urgency=medium
   * rules, control: Enable llvmpipe on ppc64el. (LP: #1489483)
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 29 Sep 2015 16:35:59 +0300
-
-mesa (11.0.0-1ubuntu1) wily; urgency=medium
-
-  * Merge from Debian. (LP: #1484279)
-  * egl-platform-mir.patch: Updated.
-  * i965-remove-early-release-of-dri2-miptree.patch: Add a workaround to
-    fix crashes in brw_meta_fast_clear. (LP: #1492037)
-  * control, rules: Default to llvm-3.6 again, because 3.7 won't be in
-    main for wily.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 22 Sep 2015 19:20:17 +0300
 
 mesa (11.0.0-1) experimental; urgency=medium
 
@@ -2445,14 +1732,6 @@ mesa (10.6.4-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Wed, 19 Aug 2015 09:11:47 +0300
 
-mesa (10.6.3-1ubuntu1) wily; urgency=medium
-
-  * Merge from debian-experimental git.
-  * Drop skl-*, i965-* patches, upstream.
-  * egl-platform-mir.patch: Updated.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 11 Aug 2015 08:00:09 +0300
-
 mesa (10.6.3-1) unstable; urgency=medium
 
   * New upstream release.
@@ -2466,12 +1745,6 @@ mesa (10.6.3-1) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 28 Jul 2015 11:12:44 +0300
 
-mesa (10.5.9-2ubuntu1) wily; urgency=medium
-
-  * Merge from Debian unstable.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 10 Jul 2015 14:02:38 +0300
-
 mesa (10.5.9-2) unstable; urgency=medium
 
   * i965-do_blit_drawpixels-decode-array-formats.patch: Fix a regression
@@ -2479,57 +1752,17 @@ mesa (10.5.9-2) unstable; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Fri, 10 Jul 2015 13:01:40 +0300
 
-mesa (10.5.9-1ubuntu1) wily; urgency=medium
-
-  * Merge from Debian unstable.
-  * skl-use-1-register-for-uniform-pull.diff dropped, upstream.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 06 Jul 2015 10:03:58 +0300
-
 mesa (10.5.9-1) unstable; urgency=medium
 
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Mon, 06 Jul 2015 08:56:26 +0300
 
-mesa (10.5.8-1ubuntu2) wily; urgency=medium
-
-  * i965-store-the-gpu-revision.diff,
-    i965-refactor-simd16-to-2xsimd8-checks.diff,
-    i965-define-i915-param-revision.diff,
-    skl-break-down-simd16-3-source-instructions.diff:
-    Fix noise in Unity, torcs et al. (LP: #1471213)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 03 Jul 2015 15:08:26 +0300
-
-mesa (10.5.8-1ubuntu1) wily; urgency=medium
-
-  * Merge from Debian unstable.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 25 Jun 2015 21:34:12 +0300
-
 mesa (10.5.8-1) unstable; urgency=medium
 
   * New upstream release.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Thu, 25 Jun 2015 18:50:11 +0300
-
-mesa (10.5.7-1ubuntu1) wily; urgency=medium
-
-  * Merge from Debian unstable, remaining changes
-    - libclc/clang is not in main, drop building mesa-opencl-icd
-    - drop building the software rasterizer
-    - llvm-3.6 is the default on Ubuntu, use it
-    - install GL/EGL libs under a separate dir to not conflict with
-      blobs, use alternatives for ldconfig
-    - patches:
-      egl-platform-mir.patch: Mir EGL platform
-      i915-dont-default-to-2.1.patch: revert of i915 forced OpenGL
-        2.1 commit
-      skl-*: backports for Skylake
-  * control: Add libmirclient-dev to build-depends.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Tue, 16 Jun 2015 14:33:48 +0300
 
 mesa (10.5.7-1) unstable; urgency=medium
 
@@ -2548,93 +1781,6 @@ mesa (10.5.5-1) unstable; urgency=medium
   * libegl1-mesa.symbols: Updated.
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 12 May 2015 13:26:49 +0300
-
-mesa (10.5.2-0ubuntu1) vivid; urgency=medium
-
-  * Merge from unreleased experimental git
-    - new upstream bugfix release
-  * egl-platform-mir.patch: Refreshed.
-
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 30 Mar 2015 15:07:30 +0300
-
-mesa (10.5.0-0ubuntu1) vivid; urgency=medium
-
-  * Merge with unreleased debian-experimental.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 09 Mar 2015 14:10:00 +0100
-
-mesa (10.5.0~rc3-0ubuntu1) vivid; urgency=medium
-  
-  * Merge with unreleased debian-experimental.
-  * Drop skl-implement-wadisable1ddepthstencil.diff, upstreamed.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 02 Mar 2015 11:45:53 +0100
-
-mesa (10.5.0~rc2-0ubuntu1) vivid; urgency=medium
-  
-  * Merge with unreleased debian-experimental.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 16 Feb 2015 09:35:43 +0100
-
-mesa (10.5.0~rc1-0ubuntu2) vivid; urgency=medium
-
-  * Add a couple of backported fixes for Skylake:
-    skl-use-1-register-for-uniform-pull.diff
-    skl-use-vec4-datatypes-for-message-header.diff
-    skl-implement-wadisable1ddepthstencil.diff
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 20 Feb 2015 08:54:44 +0200
-
-mesa (10.5.0~rc1-0ubuntu1) vivid; urgency=medium
-
-  [ Timo Aaltonen ]
-  * Update Mir patch.
-
-  [ Maarten Lankhorst ]
-  * Merge from unreleased debian-experimental.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 19 Feb 2015 11:28:53 +0100
-
-mesa (10.4.2-2ubuntu5) vivid; urgency=medium
-
-  * Fix ftbfs from no longer including libmirclient-dev.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 11 Feb 2015 09:21:54 +0100
-
-mesa (10.4.2-2ubuntu4) vivid; urgency=medium
-
-  * debian/control:
-    - Change build-dep for mir to mir-client-platform-mesa-dev.
-  * debian/patches/egl-platform-mir.patch:
-    - Fix potential double free (LP: #1414999).
-    - Fix gbm_device leak (LP: #1419704).
-    - Fix dri_buffers[front/back] leak (LP: #1419710).
-    - Use mir-client-platform-mesa-dev to get Mir build flags.
-
- -- Alexandros Frantzis <alexandros.frantzis@canonical.com>  Mon, 09 Feb 2015 12:35:56 +0200
-
-mesa (10.4.2-2ubuntu3) vivid; urgency=medium
-
-  * egl-platform-mir.patch: Fix memory leak. (LP:#1418486)
-
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 06 Feb 2015 12:12:01 +0200
-
-mesa (10.4.2-2ubuntu2) vivid; urgency=medium
-
-  * Flip the switch to llvm 3.6 with patches backported from upstream.
-  * Add upstream workaround for hangs on gen4. (LP: #1388612)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 29 Jan 2015 13:27:10 +0100
-
-mesa (10.4.2-2ubuntu1) vivid; urgency=medium
-
-  [ Timo Aaltonen ]
-  * Merge from Debian experimental.
-
-  [ Maarten Lankhorst ]
-  * Disable opencl after it was re-enabled accidentally in the merge.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 20 Jan 2015 10:30:20 +0100
 
 mesa (10.4.2-2) unstable; urgency=medium
 
@@ -2656,12 +1802,6 @@ mesa (10.4.2-1) experimental; urgency=medium
 
  -- Timo Aaltonen <tjaalton@debian.org>  Tue, 13 Jan 2015 13:43:51 +0200
 
-mesa (10.3.2-0ubuntu1) vivid; urgency=medium
-
-  * Merge from unreleased debian-unstable.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 27 Oct 2014 08:43:19 +0100
-
 mesa (10.3.2-1) unstable; urgency=medium
 
   [ Sven Joachim ]
@@ -2669,13 +1809,6 @@ mesa (10.3.2-1) unstable; urgency=medium
     - Fixes crashes in vdpau with the r600g driver (Closes: #766058).
 
  -- Julien Cristau <jcristau@debian.org>  Mon, 27 Oct 2014 11:40:24 +0100
-
-mesa (10.3.1-1ubuntu1) utopic; urgency=medium
-
-  * Merge with released debian unstable, no changes in packaging.
-    - New upstream release. (LP: #1384289)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 23 Oct 2014 12:50:53 +0200
 
 mesa (10.3.1-1) unstable; urgency=medium
 
@@ -2690,33 +1823,6 @@ mesa (10.3.0-2) experimental; urgency=medium
   * Add missing Replaces/Breaks for the gallium-pipe move.
 
  -- Julien Cristau <jcristau@debian.org>  Fri, 10 Oct 2014 00:09:47 +0200
-
-mesa (10.3.0-0ubuntu3) utopic; urgency=medium
-
-  [ Andreas Pokorny ]
-  * debian/patches/egl-platform-mir.patch:
-    - Add support for get_image_buffers and KHR_image_pixmap.
-
-  [ Alexandros Frantzis ]
-  * debian/patches/egl-platform-mir.patch:
-    - Update for Mesa 10.3 (LP: #1377853).
-
- -- Alexandros Frantzis <alexandros.frantzis@canonical.com>  Tue, 07 Oct 2014 13:06:26 +0300
-
-mesa (10.3.0-0ubuntu2) utopic; urgency=medium
-
-  * Add depends on libgl1-mesa-dri to some packages.
-    - libgl1-mesa-glx, libegl1-mesa and libgbm1 depend on the dri
-      files to be installed, even for swrast support. (LP: #1374131)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 29 Sep 2014 14:33:23 +0200
-
-mesa (10.3.0-0ubuntu1) utopic; urgency=medium
-
-  * New upstream release. (LP: #1364003)
-  * Merge from released debian-experimental.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 22 Sep 2014 15:42:27 +0200
 
 mesa (10.3.0-1) experimental; urgency=medium
 
@@ -2775,47 +1881,6 @@ mesa (10.3.0~rc3-1) experimental; urgency=medium
 
  -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 08 Sep 2014 15:50:42 +0200
 
-mesa (10.2.6-1ubuntu3) utopic; urgency=medium
-
-  * And revert again for now.. (LP: #1360241)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Fri, 22 Aug 2014 15:02:30 +0200
-
-mesa (10.2.6-1ubuntu2) utopic; urgency=medium
-
-  * Fixup typo.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 21 Aug 2014 18:39:52 +0200
-
-mesa (10.2.6-1ubuntu1) utopic; urgency=medium
-
-  * Drop 101_ubuntu_hidden_glname.patch.
-    - 8 years old patch supposedly to fix glx-tls, but if it was
-      important nowadays I would have expected it in upstream by now.
-  * Rebuild against llvm 3.5-rc3.
-  * Add explicit depends on llvm 3.5-rc3 for libgl1-mesa-dri.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 21 Aug 2014 15:27:00 +0200
-
-mesa (10.2.6-1) unstable; urgency=medium
-
-  * New upstream release.
-  * Drop x32-updates.diff, upstream.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 21 Aug 2014 15:06:36 +0200
-
-mesa (10.2.5-1ubuntu2) utopic; urgency=medium
-
-  * Temporarily revert to llvm 3.4, too many regressions.
-
- -- Maarten Lankhorst <maarten.lankhorst@canonical.com>  Wed, 13 Aug 2014 23:11:15 +0200
-
-mesa (10.2.5-1ubuntu1) utopic; urgency=low
-
-  * Rebuild with llvm 3.5.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 12 Aug 2014 13:05:29 +0200
-
 mesa (10.2.5-1) unstable; urgency=medium
 
   [ Andreas Boll ]
@@ -2839,12 +1904,6 @@ mesa (10.2.4-1) unstable; urgency=medium
 
  -- Julien Cristau <jcristau@debian.org>  Sun, 20 Jul 2014 10:20:05 +0200
 
-mesa (10.2.3-0ubuntu1) utopic; urgency=low
-
-  * Merge from unreleased unstable to fix vmwgfx.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 09 Jul 2014 11:57:29 +0200
-
 mesa (10.2.3-1) unstable; urgency=low
 
   [ Maarten Lankhorst ]
@@ -2855,13 +1914,6 @@ mesa (10.2.3-1) unstable; urgency=low
     debian/watch so uscan can check signatures on release tarballs.
 
  -- Julien Cristau <jcristau@debian.org>  Wed, 09 Jul 2014 19:39:06 +0200
-
-mesa (10.2.2-1ubuntu1) utopic; urgency=medium
-
-  * Merge with released debian unstable.
-    - New upstream release.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 03 Jul 2014 11:44:05 +0200
 
 mesa (10.2.2-1) unstable; urgency=medium
 
@@ -2875,27 +1927,6 @@ mesa (10.2.2-1) unstable; urgency=medium
     GLX_BufferSwapComplete event) from upstream, fixes intel + dri3.
 
  -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 03 Jul 2014 09:54:48 +0200
-
-mesa (10.2.1-2ubuntu3) utopic; urgency=low
-
-  * Fix segfault in Mir EGL platform on i965 (LP: #1336854)
-
- -- Christopher James Halse Rogers <raof@ubuntu.com>  Thu, 03 Jul 2014 11:52:41 +1000
-
-mesa (10.2.1-2ubuntu2) utopic; urgency=medium
-
-  * Fix FTBFS by fixing 117-static-gallium.patch
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 25 Jun 2014 11:41:13 +0200
-
-mesa (10.2.1-2ubuntu1) utopic; urgency=medium
-
-  * Merge with released debian unstable.
-    - New upstream release.
-    - Drop upstreamed patches.
-    - Refresh mir patch.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 23 Jun 2014 15:52:33 +0200
 
 mesa (10.2.1-2) unstable; urgency=medium
 
@@ -2991,17 +2022,6 @@ mesa (10.1.4-1) unstable; urgency=medium
 
  -- Emilio Pozuelo Monfort <pochu@debian.org>  Tue, 27 May 2014 12:05:35 +0200
 
-mesa (10.1.3-0ubuntu1) utopic; urgency=medium
-
-  [ Maarten Lankhorst ]
-  * Merge from unreleased debian-unstable.
-
-  [ Timo Aaltonen ]
-  * fix-gpu-hangs-on-bdw.diff: Upstream commit to fix various GPU hangs
-    on Broadwell. (LP: #1318589)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 12 May 2014 09:51:08 +0000
-
 mesa (10.1.2-1) unstable; urgency=medium
 
   [ Andreas Boll ]
@@ -3020,39 +2040,6 @@ mesa (10.1.1-1) unstable; urgency=low
     and 'libglapi-mesa (= ${binary:Version})'.
 
  -- Julien Cristau <jcristau@debian.org>  Sun, 27 Apr 2014 19:51:45 +0200
-
-mesa (10.1.0-4ubuntu5) trusty; urgency=medium
-
-  * enable-bdw.diff: Enable Broadwell support. (LP: #1300258)
-  * fix-unity-on-bdw.diff: Fix rendering on unity.
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Mon, 14 Apr 2014 09:59:17 +0300
-
-mesa (10.1.0-4ubuntu4) trusty; urgency=medium
-
-  * Cherry-pick patches to improve stability with vmware. (LP: #1284134)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 10 Apr 2014 12:08:10 +0200
-
-mesa (10.1.0-4ubuntu3) trusty; urgency=medium
-
-  * i965-dont-call-abort-on-unknown-dev.diff: Allow using a fallback
-    driver when the native one doesn't support the device.
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Wed, 09 Apr 2014 12:42:49 +0300
-
-mesa (10.1.0-4ubuntu2) trusty; urgency=medium
-
-  * fix-kwin.diff: i965; Don't check reset status on gen4/5. (LP: #1299499)
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Tue, 01 Apr 2014 16:58:02 +0300
-
-mesa (10.1.0-4ubuntu1) trusty; urgency=medium
-
-  * Merge from unreleased debian sid.
-  * Add explicit libudev1 | libudev0 dependency. (LP: #1296947)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 31 Mar 2014 09:56:17 +0000
 
 mesa (10.1.0-5) unstable; urgency=low
 
@@ -3099,15 +2086,6 @@ mesa (10.1.0-2) experimental; urgency=medium
 
  -- Julien Cristau <jcristau@debian.org>  Mon, 17 Mar 2014 23:11:14 +0100
 
-mesa (10.1.0-1ubuntu1) trusty; urgency=medium
-
-  * Merge from released debian-experimental.
-  * Rename libvdpau1-drivers-mesa to mesa-vdpau-drivers.
-    - This makes ubuntu package names identical to debian.
-  * Disable opencl for now.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 13 Mar 2014 16:30:35 +0100
-
 mesa (10.1.0-1) experimental; urgency=low
 
   [ Andreas Boll ]
@@ -3121,32 +2099,6 @@ mesa (10.1.0-1) experimental; urgency=low
   * Drop dependency of libegl1-mesa-drivers on libgl1-mesa-dri.
 
  -- Julien Cristau <jcristau@debian.org>  Fri, 07 Mar 2014 22:16:32 +0100
-
-mesa (10.1.0~rc3-0ubuntu3) trusty; urgency=medium
-
-  * Add --dynamic-list to undo damage from -Bsymbolic-functions.
-    - This fixes vdpau interop properly.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 06 Mar 2014 10:28:47 +0100
-
-mesa (10.1.0~rc3-0ubuntu2) trusty; urgency=medium
-
-  * Install libegl-wayland in /mesa-egl again.
-    - Fixes FTBFS for g-c-c.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 05 Mar 2014 10:17:21 +0100
-
-mesa (10.1.0~rc3-0ubuntu1) trusty; urgency=medium
-
-  [ Maarten Lankhorst ]
-  * Merge from unreleased debian-experimental.
-  * Enable egl, libopenvg, gbm and vdpau for all archs.
-    - This simplifies the build rules considerably, and
-      is closer to debian behavior.
-  * Cherry pick fixes for playback of interlaced videos. (LP: #1287326)
-  * Cherry pick fixes for crashes related to vdpau interop.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 25 Feb 2014 14:29:26 +0100
 
 mesa (10.1.0~rc2-1) experimental; urgency=medium
 
@@ -3174,35 +2126,6 @@ mesa (10.1.0~rc2-1) experimental; urgency=medium
 
  -- Julien Cristau <jcristau@debian.org>  Sun, 02 Mar 2014 20:22:47 +0100
 
-mesa (10.1.0~rc1-1ubuntu4) trusty; urgency=medium
-
-  * Merge from debian git
-    - Enable building drivers for libvdpau1
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Thu, 20 Feb 2014 21:46:24 +0200
-
-mesa (10.1.0~rc1-1ubuntu3) trusty; urgency=low
-
-  [ Robert Hooker ]
-  * Add more missing depends to lib(e)gl1-mesa-dev.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 19 Feb 2014 19:38:33 +0100
-
-mesa (10.1.0~rc1-1ubuntu2) trusty; urgency=low
-
-  * Add libxcb-dri3-dev to lib(e)gl1-mesa-dev depends.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 19 Feb 2014 19:06:29 +0100
-
-mesa (10.1.0~rc1-1ubuntu1) trusty; urgency=low
-
-  * First mesa 10.1 release candidate.
-  * Refresh egl-platform-mir.patch and drop upstreamed bits.
-  * Merge more upstream fixes post rc1.
-  * Cherry pick some fixes for GLX fbconfig. (LP: #1278168)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 19 Feb 2014 17:19:12 +0100
-
 mesa (10.1.0~rc1-1) experimental; urgency=low
 
   * New upstream release.
@@ -3226,20 +2149,6 @@ mesa (10.0.2-1) experimental; urgency=low
 
  -- Julien Cristau <jcristau@debian.org>  Sat, 25 Jan 2014 10:44:22 +0100
 
-mesa (10.0.1-1ubuntu2) trusty; urgency=medium
-
-  [ Matthias Klose ]
-  * Build using llvm-3.4.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 19 Dec 2013 19:21:03 +0100
-
-mesa (10.0.1-1ubuntu1) trusty; urgency=low
-
-  * New upstream release.
-  * Do not enable llvmpipe on armhf. (LP: #1260068)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 19 Dec 2013 18:03:32 +0100
-
 mesa (10.0.1-1) experimental; urgency=low
 
   * New upstream release.
@@ -3248,35 +2157,6 @@ mesa (10.0.1-1) experimental; urgency=low
   * Disable llvmpipe on armhf, it regresses.
 
  -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 18 Dec 2013 15:18:25 +0100
-
-mesa (10.0.0-1ubuntu4) trusty; urgency=medium
-
-  * libegl1-mesa-dev: Don't depend on libmirclient-dev on ppc64.
-
- -- Matthias Klose <doko@ubuntu.com>  Mon, 16 Dec 2013 10:51:02 +0100
-
-mesa (10.0.0-1ubuntu3) trusty; urgency=low
-
-  * Refresh Mir EGL platform patch.
-    + Adds EGL_KHR_image support, needed for nested Mir-on-Mir support
-    + Adds resize support (LP: #1227744)
-    + Properly free()s surface front and back buffers on destroy (LP: #1211982)
-
- -- Christopher James Halse Rogers <raof@ubuntu.com>  Wed, 11 Dec 2013 12:24:46 +0800
-
-mesa (10.0.0-1ubuntu2) trusty; urgency=low
-
-  * Do not require libdrm-intel on arm, fixes FTBFS regression.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 09 Dec 2013 19:20:07 +0100
-
-mesa (10.0.0-1ubuntu1) trusty; urgency=low
-
-  * Merge from released debian-experimental, changes:
-    - Reset versions on libxatracker2 symbols.
-    - Enable llvmpipe on armhf.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 09 Dec 2013 11:59:03 +0100
 
 mesa (10.0.0-1) experimental; urgency=low
 
@@ -3298,82 +2178,17 @@ mesa (10.0.0-1) experimental; urgency=low
 
  -- Julien Cristau <jcristau@debian.org>  Sun, 08 Dec 2013 15:17:17 +0100
 
-mesa (10.0.0-0ubuntu1) trusty; urgency=low
-
-  * Merge from unreleased debian-experimental.
-  * Drop upstreamed aarch64 patch.
-  * Refresh patches.
-  * Disable 118-dricore-gallium.patch for now, requires porting.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 09 Dec 2013 11:11:41 +0100
-
-mesa (9.2.2-1ubuntu2) trusty; urgency=medium
-
-  * Build without Mir backend on ppc64.
-
- -- Matthias Klose <doko@ubuntu.com>  Sat, 07 Dec 2013 14:42:44 +0100
-
-mesa (9.2.2-1ubuntu1) trusty; urgency=low
-
-  * Merge from released debian-unstable.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 22 Oct 2013 12:17:27 +0200
-
 mesa (9.2.2-1) unstable; urgency=low
 
   * New upstream release.
 
  -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 22 Oct 2013 10:59:20 +0200
 
-mesa (9.2.1-1ubuntu3) saucy; urgency=low
-
-  * libegl1-mesa-dev: Don't depend on libmirclient-dev on AArch64.
-
- -- Matthias Klose <doko@ubuntu.com>  Thu, 10 Oct 2013 16:25:10 +0200
-
-mesa (9.2.1-1ubuntu2) saucy; urgency=low
-
-  * Build without Mir backend on AArch64.
-
- -- Matthias Klose <doko@ubuntu.com>  Wed, 09 Oct 2013 23:11:33 +0000
-
-mesa (9.2.1-1ubuntu1) saucy; urgency=low
-
-  [ Robert Hooker ]
-  * Add i915-dont-default-to-2.1.patch: Stop defaulting to OpenGL 2.1 that is not
-    fully implemented in hardware on gen3 GPUs, the software fallbacks make Unity
-    unusably slow. (LP: #1222602)
-  [ Maarten Lankhorst ]
-  * New upstream bugfix release. (LP: #1232940)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 07 Oct 2013 10:39:18 +0200
-
 mesa (9.2.1-1) experimental; urgency=low
 
   * New upstream release.
 
  -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 07 Oct 2013 10:00:39 +0200
-
-mesa (9.2-1ubuntu3) saucy; urgency=low
-
-  * Create a libglapi.so symlink. (LP: #1232000)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 01 Oct 2013 13:09:38 +0200
-
-mesa (9.2-1ubuntu2) saucy; urgency=low
-
-  * Fix double-free in Mir EGL platform (LP: #1221974)
-
- -- Christopher James Halse Rogers <raof@ubuntu.com>  Tue, 17 Sep 2013 12:05:36 -0400
-
-mesa (9.2-1ubuntu1) saucy; urgency=low
-
-  * Merge from debian-experimental, remaining changes:
-    - Add support for aarch64.
-    - Build libgallium and libmesagallium shared.
-    - Enable mir support.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 28 Aug 2013 14:02:08 +0200
 
 mesa (9.2-1) experimental; urgency=low
 
@@ -3422,24 +2237,6 @@ mesa (9.1.7-1) unstable; urgency=low
 
  -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 07 Oct 2013 11:34:34 +0200
 
-mesa (9.1.6-2ubuntu2) saucy; urgency=low
-
-  * Import missing powerpc build fixes.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 13 Aug 2013 16:23:32 +0200
-
-mesa (9.1.6-2ubuntu1) saucy; urgency=low
-
-  * New upstream release.
-  * Merge from RELEASED debian-unstable. \o/
-  * Remaining changes:
-    - Building mir.
-    - Add support for aarch64.
-    - Linking against shared dricore/gallium.
-  * Drop fix-osmesa-exports.diff, upstreamed.
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 13 Aug 2013 15:39:43 +0200
-
 mesa (9.1.6-2) unstable; urgency=low
 
   * Don't run 'make -j' if DEB_BUILD_OPTIONS doesn't set parallel.  Oops.
@@ -3457,65 +2254,6 @@ mesa (9.1.6-1) unstable; urgency=low
   * Don't run configure for different builds in parallel.
 
  -- Julien Cristau <jcristau@debian.org>  Sun, 11 Aug 2013 18:15:58 +0200
-
-mesa (9.1.4-0ubuntu8) saucy; urgency=low
-
-  * hide the now missing Mir symbol on powerpc.
-
- -- Didier Roche <didrocks@ubuntu.com>  Mon, 05 Aug 2013 13:43:52 +0200
-
-mesa (9.1.4-0ubuntu7) saucy; urgency=low
-
-  * rules,control: Don't build Mir support on powerpc as it's not available
-    there.
-
- -- Didier Roche <didrocks@ubuntu.com>  Mon, 05 Aug 2013 12:59:59 +0200
-
-mesa (9.1.4-0ubuntu6) saucy; urgency=low
-
-  * Add Mir EGL platform
-
- -- Christopher James Halse Rogers <raof@ubuntu.com>  Fri, 02 Aug 2013 13:30:23 +1000
-
-mesa (9.1.4-0ubuntu5) saucy; urgency=low
-
-  * Fix the build on Aarch64, disabling most of the acceleration
-    packages.
-
- -- Matthias Klose <doko@ubuntu.com>  Mon, 22 Jul 2013 14:29:24 +0200
-
-mesa (9.1.4-0ubuntu4) saucy; urgency=low
-
-  * Fix build on Aarch64.
-  * debian/rules: Split out a configure target to be able to restart
-    builds.
-
- -- Matthias Klose <doko@ubuntu.com>  Sun, 21 Jul 2013 13:43:45 +0200
-
-mesa (9.1.4-0ubuntu3) saucy; urgency=low
-
-  * Add fix-os-mesa-exports.diff from upstream. (LP: #1066599)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 16 Jul 2013 11:29:32 +0200
-
-mesa (9.1.4-0ubuntu2) saucy; urgency=low
-
-  * control, rules: Again, add llvm-3.2-dev to build-depends for
-    powerpc, enable gallium llvm and shared libs (FTBFS).
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Tue, 02 Jul 2013 15:26:47 +0300
-
-mesa (9.1.4-0ubuntu1) saucy; urgency=low
-
-  * Merge from unreleased debian git, remaining changes:
-    - don't build libgl1-mesa-swx11*
-    - use alternatives for libEGL, libGL*, libOpenVG
-    - build a common libgallium library to save disk space
-    - clean up extra po files
-  * Drop patches now upstream.
-  * Update revert-a64c1eb9b110.diff.
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Tue, 02 Jul 2013 10:06:51 +0300
 
 mesa (9.1.4-1) unstable; urgency=low
 
@@ -3687,196 +2425,6 @@ mesa (9.1.3-1) experimental; urgency=low
     llvm-config-3.2 --libdir, otherwise configure fails.
 
  -- Emilio Pozuelo Monfort <pochu@debian.org>  Tue, 28 May 2013 21:15:55 +0200
-
-mesa (9.1.3-0ubuntu3) saucy; urgency=low
-
-  * Added patches to add/fix Haswell pci-id's (LP: #1175533)
-    - add-vlv-ids.diff
-    - fix-hsw-gt3-names.diff
-    - fix-missing-gt3-id.diff
-    - add-more-reserved-hsw-ids.diff
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Wed, 19 Jun 2013 14:16:47 +0200
-
-mesa (9.1.3-0ubuntu2) saucy; urgency=low
-
-  * Add back a patch that reverts a change which made blur slow on i915,
-    add two other reverts so the big one applies cleanly. (LP: #1187500)
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Fri, 07 Jun 2013 15:11:32 +0300
-
-mesa (9.1.3-0ubuntu1) saucy; urgency=low
-
-  [ Robert Hooker ]
-  * New upstream bug-fix release.
-  * Drop upstream patches:
-     - 0001-nv50-fix-3D-render-target-setup.patch
-     - 0002-nv50-nvc0-disable-DEPTH_RANGE_NEAR-FAR-clipping-duri.patch
-     - 0003-nv50-nvc0-fix-3d-blits-restore-viewport-after-blit.patch
-     - 0004-nvc0-fix-for-2d-engine-R-source-formats-writing-RRR1.patch
-     - 100_no_abi_tag.patch
-     - 119-libllvmradeon-link.patch
-     - vbo-fix-crash.diff
-  * debian/patches/117-static-gallium.patch: Refresh for minor change
-    in 9.1.2
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 23 May 2013 10:06:41 +0200
-
-mesa (9.1.1-0ubuntu3) raring; urgency=low
-
-  * Hide x86sse symbols on i386, preventing conflicts. (LP: #1170074)
-    - 120-hide-x86sse.patch
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 18 Apr 2013 12:27:32 +0200
-
-mesa (9.1.1-0ubuntu2) raring; urgency=low
-
-  * control, rules: Add llvm-3.2-dev to build-depends for powerpc, enable
-    gallium llvm and shared libs (FTBFS).
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Wed, 17 Apr 2013 01:42:38 -0600
-
-mesa (9.1.1-0ubuntu1) raring; urgency=low
-
-  [ Timo Aaltonen ]
-  * Merge from unreleased debian git
-    - new upstream release (LP: #1112147, #1164093)
-  * Revert a commit to fix slow blur on intel.
-  * vbo-fix-crash.diff: Patch from the stable tree that fixes a crasher
-    with shared display lists.
-
-  [ Maarten Lankhorst ]
-  * Add some more patches to fix image copy regressions on nouveau.
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Tue, 16 Apr 2013 15:35:32 +0300
-
-mesa (9.1~git20130207.f1c46c84-0ubuntu1) UNRELEASED; urgency=low
-
-  [ Timo Aaltonen ]
-  * Merge from unreleased debian git.
-  * Refresh patches.
-
-  [ Robert Hooker ]
-  * Drop ubuntu specific libtxc-dxtn-s2tc0 recommends from libgl1-mesa-glx,
-    libgl1-mesa-dri now recommends libtxc-dxtn0.
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Thu, 07 Feb 2013 18:09:58 +0200
-
-mesa (9.0.3-0ubuntu1) raring; urgency=low
-
-  * New upstream release. (LP: #1134466)
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Thu, 14 Mar 2013 12:18:29 +0100
-
-mesa (9.0.2-0ubuntu1) raring; urgency=low
-
-  * New upstream release.
-  * Decrease size of mesa's libgl1-mesa-dri again
-    - re-enable 117-static-gallium.patch
-    - add 118-dricore-gallium.patch to link against libdricore again
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Tue, 22 Jan 2013 11:54:09 +0100
-
-mesa (9.0.1-0ubuntu1) raring; urgency=low
-
-  * Merge from unreleased debian git.
-    - release 9.0.1
-  * add 118-automake-ldrm.patch to ease backport to precise
-    - upstream commit, targeted for 9.0.2
-
- -- Maarten Lankhorst <maarten.lankhorst@ubuntu.com>  Mon, 19 Nov 2012 12:03:50 +0100
-
-mesa (9.0-0ubuntu2) raring; urgency=low
-
-  * patches/118-wayland-0.99.diff: Upstream port to wayland 0.99 API
-  * patches/119-wayland-no-0.85.diff: Drop wayland 0.85 defines
-  * patches/120-wayland-no-egl-pixmap.diff: Drop wl_egl_pixmap usage
-  * debian/control: Adjust build-depends to match the above patches
-
- -- Adam Conrad <adconrad@ubuntu.com>  Sun, 18 Nov 2012 02:52:31 +0000
-
-mesa (9.0-0ubuntu1) quantal; urgency=low
-
-  * Merge from unreleased debian git.
-    - final 9.0 release.
-  * rules: Don't try building gallium swrast for arm, since it doesn't
-    work and wasn't actually built anyway.
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Tue, 09 Oct 2012 15:55:51 +0300
-
-mesa (9.0~git20121004.b2048c5e-0ubuntu1) quantal; urgency=low
-
-  * Merge from unreleased debian git.
-    - new snapshot leading to final 9.0.
-  * Drop patch 118, obsolete.
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Wed, 03 Oct 2012 18:23:24 +0300
-
-mesa (9.0~git20120917.7cfd42ce-0ubuntu3) quantal; urgency=low
-
-  * Add 118-undefined-symbols.patch, fixing libglapi and libosmesa
-    missing symbols. (LP: #1053088)
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Thu, 20 Sep 2012 13:25:46 +0300
-
-mesa (9.0~git20120917.7cfd42ce-0ubuntu2) quantal; urgency=low
-
-  * Add Recommends on libtxc-dxtn-s2tc0, required by Bastion, Psychonauts,
-    Amnesia and other games on Intel graphics.  This package provides
-    patent-free s3tc texture support.
-    (LP: #1053029)
-
- -- Bryce Harrington <bryce@ubuntu.com>  Tue, 18 Sep 2012 21:17:11 -0700
-
-mesa (9.0~git20120917.7cfd42ce-0ubuntu1) quantal; urgency=low
-
-  * Merge from unreleased debian git. (LP: #1047306)
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Mon, 17 Sep 2012 13:24:35 +0300
-
-mesa (9.0~git20120903.e1673d20-0ubuntu1) quantal; urgency=low
-
-  * Merge from unreleased debian git.
-  * Remove 118-remove-assertion.diff, included upstream.
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Thu, 06 Sep 2012 18:09:56 +0300
-
-mesa (9.0~git20120821.c1114c61-0ubuntu2) quantal; urgency=low
-
-  * Added 118-remove-assertion.diff from upstream (LP: #1042293).
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Mon, 27 Aug 2012 21:12:44 +0300
-
-mesa (9.0~git20120821.c1114c61-0ubuntu1) quantal; urgency=low
-
-  * Merge from unreleased debian git.
-    - Includes support for ATI Trinity PCI IDs (LP: #1009089)
-  * rules, control, libgl1-mesa-swx11*: Remove swx11 support.
-  * Refresh patches:
-    - drop 115_llvm_dynamic_linking.diff,
-      117_nullptr_check_in_query_version.patch, and
-      118_glsl_initialize_samplers.patch, all upstream
-    - disable 116_use_shared_galliumcore.diff until it's reviewed and
-      reworked to apply
-  * not-installed, libegl1-mesa-drivers-install.linux.in: Updated to
-    match the single-pass build.
-  * libgl1-mesa-dri.*install.in: Drop libglsl.so, it's included in
-    libdricore.so now.
-  * rules: Don't disable GLU on the common flags, we need to build it
-    on the dri target.
-  * libglu*install.in: Fix the source file paths to match the build target.
-    Drop the static lib from -dev since only shared libs get built.
-  * libgl1-mesa-dev.install.in: Fix the source file paths to match the
-    build target.
-  * libgl1-mesa-dri.install.linux.in: Don't try to install libgallium.so,
-    which isn't built yet.
-  * rules: Enable llvmpipe on armhf to see if it works or not.
-  * rules: Remove bin/install-sh on clean, and don't create a symlink for
-    it.
-  * control: Add Pre-Depends on dpkg-dev due to the binaries using xz
-    compression.
-
- -- Timo Aaltonen <tjaalton@ubuntu.com>  Thu, 23 Aug 2012 15:37:30 +0300
 
 mesa (8.0.5-4) unstable; urgency=low
 

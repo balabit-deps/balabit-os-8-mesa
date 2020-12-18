@@ -213,7 +213,7 @@ v3d_spill_reg(struct v3d_compile *c, int spill_temp)
         uint32_t spill_offset = 0;
 
         if (!is_uniform) {
-                uint32_t spill_offset = c->spill_size;
+                spill_offset = c->spill_size;
                 c->spill_size += V3D_CHANNELS * sizeof(uint32_t);
 
                 if (spill_offset == 0)
@@ -309,7 +309,7 @@ struct v3d_ra_select_callback_data {
 };
 
 static unsigned int
-v3d_ra_select_callback(struct ra_graph *g, BITSET_WORD *regs, void *data)
+v3d_ra_select_callback(unsigned int n, BITSET_WORD *regs, void *data)
 {
         struct v3d_ra_select_callback_data *v3d_ra = data;
         int r5 = ACC_INDEX + 5;
@@ -677,14 +677,6 @@ v3d_register_allocate(struct v3d_compile *c, bool *spilled)
                 } else {
                         temp_registers[i].magic = false;
                         temp_registers[i].index = ra_reg - PHYS_INDEX;
-                }
-
-                /* If the value's never used, just write to the NOP register
-                 * for clarity in debug output.
-                 */
-                if (c->temp_start[i] == c->temp_end[i]) {
-                        temp_registers[i].magic = true;
-                        temp_registers[i].index = V3D_QPU_WADDR_NOP;
                 }
         }
 

@@ -34,6 +34,12 @@ glsl_get_type_name(const glsl_type *type)
    return type->name;
 }
 
+int
+glsl_array_size(const struct glsl_type *type)
+{
+   return type->array_size();
+}
+
 const glsl_type *
 glsl_get_array_element(const glsl_type* type)
 {
@@ -355,6 +361,13 @@ glsl_sampler_type_is_array(const struct glsl_type *type)
 }
 
 bool
+glsl_struct_type_is_packed(const struct glsl_type *type)
+{
+   assert(glsl_type_is_struct(type));
+   return type->packed;
+}
+
+bool
 glsl_type_is_dual_slot(const struct glsl_type *type)
 {
    return type->is_dual_slot();
@@ -528,6 +541,20 @@ glsl_array_type(const glsl_type *base, unsigned elements,
 }
 
 const glsl_type *
+glsl_replace_vector_type(const glsl_type *t, unsigned components)
+{
+   if (glsl_type_is_array(t)) {
+      return glsl_array_type(
+         glsl_replace_vector_type(t->fields.array, components), t->length,
+                                  t->explicit_stride);
+   } else if (glsl_type_is_vector_or_scalar(t)) {
+      return glsl_vector_type(t->base_type, components);
+   } else {
+      unreachable("Unhandled base type glsl_replace_vector_type()");
+   }
+}
+
+const glsl_type *
 glsl_struct_type(const glsl_struct_field *fields,
                  unsigned num_fields, const char *name,
                  bool packed)
@@ -606,6 +633,24 @@ glsl_channel_type(const glsl_type *t)
    }
 }
 
+const glsl_type *
+glsl_float16_type(const struct glsl_type *type)
+{
+   return type->get_float16_type();
+}
+
+const glsl_type *
+glsl_int16_type(const struct glsl_type *type)
+{
+   return type->get_int16_type();
+}
+
+const glsl_type *
+glsl_uint16_type(const struct glsl_type *type)
+{
+   return type->get_uint16_type();
+}
+
 void
 glsl_get_natural_size_align_bytes(const struct glsl_type *type,
                                   unsigned *size, unsigned *align)
@@ -637,7 +682,7 @@ glsl_get_natural_size_align_bytes(const struct glsl_type *type,
    }
 
    case GLSL_TYPE_ARRAY: {
-      unsigned elem_size, elem_align;
+      unsigned elem_size = 0, elem_align = 0;
       glsl_get_natural_size_align_bytes(type->fields.array,
                                         &elem_size, &elem_align);
       *align = elem_align;
@@ -718,7 +763,10 @@ glsl_type_get_sampler_count(const struct glsl_type *type)
               glsl_type_get_sampler_count(glsl_without_array(type)));
    }
 
-   if (glsl_type_is_struct_or_ifc(type)) {
+   /* Ignore interface blocks - they can only contain bindless samplers,
+    * which we shouldn't count.
+    */
+   if (glsl_type_is_struct(type)) {
       unsigned count = 0;
       for (unsigned i = 0; i < glsl_get_length(type); i++)
          count += glsl_type_get_sampler_count(glsl_get_struct_field(type, i));
@@ -739,7 +787,10 @@ glsl_type_get_image_count(const struct glsl_type *type)
               glsl_type_get_image_count(glsl_without_array(type)));
    }
 
-   if (glsl_type_is_struct_or_ifc(type)) {
+   /* Ignore interface blocks - they can only contain bindless images,
+    * which we shouldn't count.
+    */
+   if (glsl_type_is_struct(type)) {
       unsigned count = 0;
       for (unsigned i = 0; i < glsl_get_length(type); i++)
          count += glsl_type_get_image_count(glsl_get_struct_field(type, i));
@@ -750,6 +801,43 @@ glsl_type_get_image_count(const struct glsl_type *type)
       return 1;
 
    return 0;
+}
+
+enum glsl_interface_packing
+glsl_get_internal_ifc_packing(const struct glsl_type *type,
+                              bool std430_supported)
+{
+   return type->get_internal_ifc_packing(std430_supported);
+}
+
+enum glsl_interface_packing
+glsl_get_ifc_packing(const struct glsl_type *type)
+{
+   return type->get_interface_packing();
+}
+
+unsigned
+glsl_get_std140_base_alignment(const struct glsl_type *type, bool row_major)
+{
+   return type->std140_base_alignment(row_major);
+}
+
+unsigned
+glsl_get_std140_size(const struct glsl_type *type, bool row_major)
+{
+   return type->std140_size(row_major);
+}
+
+unsigned
+glsl_get_std430_base_alignment(const struct glsl_type *type, bool row_major)
+{
+   return type->std430_base_alignment(row_major);
+}
+
+unsigned
+glsl_get_std430_size(const struct glsl_type *type, bool row_major)
+{
+   return type->std430_size(row_major);
 }
 
 unsigned

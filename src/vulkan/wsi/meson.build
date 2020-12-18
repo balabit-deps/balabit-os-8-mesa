@@ -34,15 +34,16 @@ if with_platform_wayland
   ]
 endif
 
-if with_platform_drm
+if system_has_kms_drm and not with_platform_android
   files_vulkan_wsi += files('wsi_common_display.c')
 endif
 
 libvulkan_wsi = static_library(
   'vulkan_wsi',
   files_vulkan_wsi,
-  include_directories : [inc_common, inc_include],
+  include_directories : [inc_include, inc_src],
   dependencies : [vulkan_wsi_deps, dep_libdrm, idep_vulkan_util, idep_xmlconfig],
-  c_args : [c_vis_args, vulkan_wsi_args],
+  c_args : [vulkan_wsi_args],
+  gnu_symbol_visibility : 'hidden',
   build_by_default : false,
 )

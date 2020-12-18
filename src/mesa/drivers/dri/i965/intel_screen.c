@@ -44,7 +44,8 @@
 
 #include "utils.h"
 #include "util/disk_cache.h"
-#include "util/xmlpool.h"
+#include "util/driconf.h"
+#include "util/u_memory.h"
 
 #include "common/gen_defines.h"
 
@@ -57,7 +58,7 @@ DRI_CONF_BEGIN
        * DRI_CONF_BO_REUSE_ALL
        */
       DRI_CONF_OPT_BEGIN_V(bo_reuse, enum, 1, "0:1")
-	 DRI_CONF_DESC_BEGIN(en, "Buffer object reuse")
+	 DRI_CONF_DESC_BEGIN("Buffer object reuse")
 	    DRI_CONF_ENUM(0, "Disable buffer object reuse")
 	    DRI_CONF_ENUM(1, "Enable reuse of all sizes of buffer objects")
 	 DRI_CONF_DESC_END
@@ -70,7 +71,7 @@ DRI_CONF_BEGIN
       DRI_CONF_PRECISE_TRIG("false")
 
       DRI_CONF_OPT_BEGIN(clamp_max_samples, int, -1)
-              DRI_CONF_DESC(en, "Clamp the value of GL_MAX_SAMPLES to the "
+              DRI_CONF_DESC("Clamp the value of GL_MAX_SAMPLES to the "
                             "given integer. If negative, then do not clamp.")
       DRI_CONF_OPT_END
    DRI_CONF_SECTION_END
@@ -83,6 +84,7 @@ DRI_CONF_BEGIN
       DRI_CONF_FORCE_GLSL_VERSION(0)
       DRI_CONF_DISABLE_GLSL_LINE_CONTINUATIONS("false")
       DRI_CONF_DISABLE_BLEND_FUNC_EXTENDED("false")
+      DRI_CONF_ALLOW_EXTRA_PP_TOKENS("false")
       DRI_CONF_DUAL_COLOR_BLEND_BY_LOCATION("false")
       DRI_CONF_ALLOW_GLSL_EXTENSION_DIRECTIVE_MIDSHADER("false")
       DRI_CONF_ALLOW_GLSL_BUILTIN_VARIABLE_REDECLARATION("false")
@@ -92,7 +94,7 @@ DRI_CONF_BEGIN
       DRI_CONF_FORCE_GLSL_ABS_SQRT("false")
 
       DRI_CONF_OPT_BEGIN_B(shader_precompile, "true")
-	 DRI_CONF_DESC(en, "Perform code generation at shader link time.")
+	 DRI_CONF_DESC("Perform code generation at shader link time.")
       DRI_CONF_OPT_END
    DRI_CONF_SECTION_END
 
@@ -710,8 +712,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
    bool ok;
 
    /* Callers of this may specify a modifier, or a dri usage, but not both. The
-    * newer modifier interface deprecates the older usage flags newer modifier
-    * interface deprecates the older usage flags.
+    * newer modifier interface deprecates the older usage flags.
     */
    assert(!(use && count));
 
@@ -1512,17 +1513,6 @@ static const __DRIimageExtension intelImageExtension = {
     .queryDmaBufModifiers               = intel_query_dma_buf_modifiers,
     .queryDmaBufFormatModifierAttribs   = intel_query_format_modifier_attribs,
 };
-
-static uint64_t
-get_aperture_size(int fd)
-{
-   struct drm_i915_gem_get_aperture aperture;
-
-   if (drmIoctl(fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture) != 0)
-      return 0;
-
-   return aperture.aper_size;
-}
 
 static int
 brw_query_renderer_integer(__DRIscreen *dri_screen,
@@ -2555,7 +2545,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
 
    driParseOptionInfo(&options, brw_config_options.xml);
    driParseConfigFiles(&screen->optionCache, &options, dri_screen->myNum,
-                       "i965", NULL, NULL, 0);
+                       "i965", NULL, NULL, 0, NULL, 0);
    driDestroyOptionCache(&options);
 
    screen->driScrnPriv = dri_screen;
@@ -2618,7 +2608,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       screen->max_gtt_map_object_size = gtt_size / 4;
    }
 
-   screen->aperture_threshold = get_aperture_size(screen->fd) * 3 / 4;
+   screen->aperture_threshold = devinfo->aperture_bytes * 3 / 4;
 
    screen->hw_has_swizzling = intel_detect_swizzling(screen);
    screen->hw_has_timestamp = intel_detect_timestamp(screen);
@@ -2831,6 +2821,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
 
    screen->compiler->supports_pull_constants = true;
    screen->compiler->compact_params = true;
+   screen->compiler->lower_variable_group_size = true;
 
    screen->has_exec_fence =
      intel_get_boolean(screen, I915_PARAM_HAS_EXEC_FENCE);

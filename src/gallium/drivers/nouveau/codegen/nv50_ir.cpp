@@ -905,10 +905,8 @@ Instruction::isCommutationLegal(const Instruction *i) const
 }
 
 TexInstruction::TexInstruction(Function *fn, operation op)
-   : Instruction(fn, op, TYPE_F32)
+   : Instruction(fn, op, TYPE_F32), tex()
 {
-   memset(&tex, 0, sizeof(tex));
-
    tex.rIndirectSrc = -1;
    tex.sIndirectSrc = -1;
 
@@ -1024,6 +1022,68 @@ const struct TexInstruction::ImgFormatDesc TexInstruction::formatTable[] =
    { "BGRA8",        4, {  8,  8,  8,  8 }, UNORM, true },
 };
 
+const struct TexInstruction::ImgFormatDesc *
+TexInstruction::translateImgFormat(enum pipe_format format)
+{
+
+#define FMT_CASE(a, b) \
+  case PIPE_FORMAT_ ## a: return &formatTable[nv50_ir::FMT_ ## b]
+
+   switch (format) {
+   FMT_CASE(NONE, NONE);
+
+   FMT_CASE(R32G32B32A32_FLOAT, RGBA32F);
+   FMT_CASE(R16G16B16A16_FLOAT, RGBA16F);
+   FMT_CASE(R32G32_FLOAT, RG32F);
+   FMT_CASE(R16G16_FLOAT, RG16F);
+   FMT_CASE(R11G11B10_FLOAT, R11G11B10F);
+   FMT_CASE(R32_FLOAT, R32F);
+   FMT_CASE(R16_FLOAT, R16F);
+
+   FMT_CASE(R32G32B32A32_UINT, RGBA32UI);
+   FMT_CASE(R16G16B16A16_UINT, RGBA16UI);
+   FMT_CASE(R10G10B10A2_UINT, RGB10A2UI);
+   FMT_CASE(R8G8B8A8_UINT, RGBA8UI);
+   FMT_CASE(R32G32_UINT, RG32UI);
+   FMT_CASE(R16G16_UINT, RG16UI);
+   FMT_CASE(R8G8_UINT, RG8UI);
+   FMT_CASE(R32_UINT, R32UI);
+   FMT_CASE(R16_UINT, R16UI);
+   FMT_CASE(R8_UINT, R8UI);
+
+   FMT_CASE(R32G32B32A32_SINT, RGBA32I);
+   FMT_CASE(R16G16B16A16_SINT, RGBA16I);
+   FMT_CASE(R8G8B8A8_SINT, RGBA8I);
+   FMT_CASE(R32G32_SINT, RG32I);
+   FMT_CASE(R16G16_SINT, RG16I);
+   FMT_CASE(R8G8_SINT, RG8I);
+   FMT_CASE(R32_SINT, R32I);
+   FMT_CASE(R16_SINT, R16I);
+   FMT_CASE(R8_SINT, R8I);
+
+   FMT_CASE(R16G16B16A16_UNORM, RGBA16);
+   FMT_CASE(R10G10B10A2_UNORM, RGB10A2);
+   FMT_CASE(R8G8B8A8_UNORM, RGBA8);
+   FMT_CASE(R16G16_UNORM, RG16);
+   FMT_CASE(R8G8_UNORM, RG8);
+   FMT_CASE(R16_UNORM, R16);
+   FMT_CASE(R8_UNORM, R8);
+
+   FMT_CASE(R16G16B16A16_SNORM, RGBA16_SNORM);
+   FMT_CASE(R8G8B8A8_SNORM, RGBA8_SNORM);
+   FMT_CASE(R16G16_SNORM, RG16_SNORM);
+   FMT_CASE(R8G8_SNORM, RG8_SNORM);
+   FMT_CASE(R16_SNORM, R16_SNORM);
+   FMT_CASE(R8_SNORM, R8_SNORM);
+
+   FMT_CASE(B8G8R8A8_UNORM, BGRA8);
+
+   default:
+      assert(!"Unexpected format");
+      return &formatTable[nv50_ir::FMT_NONE];
+   }
+}
+
 void
 TexInstruction::setIndirectR(Value *v)
 {
@@ -1122,6 +1182,7 @@ Program::Program(Type type, Target *arch)
 
    maxGPR = -1;
    fp64 = false;
+   persampleInvocation = false;
 
    main = new Function(this, "MAIN", ~0);
    calls.insert(&main->call);
@@ -1194,14 +1255,12 @@ nv50_ir_init_prog_info(struct nv50_ir_prog_info *info)
       info->prop.cp.numThreads[1] =
       info->prop.cp.numThreads[2] = 1;
    }
-   info->io.pointSize = 0xff;
    info->io.instanceId = 0xff;
    info->io.vertexId = 0xff;
    info->io.edgeFlagIn = 0xff;
    info->io.edgeFlagOut = 0xff;
    info->io.fragDepth = 0xff;
    info->io.sampleMask = 0xff;
-   info->io.backFaceColor[0] = info->io.backFaceColor[1] = 0xff;
 }
 
 int

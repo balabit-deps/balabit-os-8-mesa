@@ -111,7 +111,7 @@ nir_opt_idiv_const_instr(nir_builder *b, nir_alu_instr *alu)
 
    b->cursor = nir_before_instr(&alu->instr);
 
-   nir_ssa_def *q[4];
+   nir_ssa_def *q[NIR_MAX_VEC_COMPONENTS];
    for (unsigned comp = 0; comp < alu->dest.dest.ssa.num_components; comp++) {
       /* Get the numerator for the channel */
       nir_ssa_def *n = nir_channel(b, alu->src[0].src.ssa,
@@ -198,6 +198,8 @@ nir_opt_idiv_const_impl(nir_function_impl *impl, unsigned min_bit_size)
    if (progress) {
       nir_metadata_preserve(impl, nir_metadata_block_index |
                                   nir_metadata_dominance);
+   } else {
+      nir_metadata_preserve(impl, nir_metadata_all);
    }
 
    return progress;

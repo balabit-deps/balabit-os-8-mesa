@@ -750,9 +750,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
    }
 
    if (!progress) {
-#ifndef NDEBUG
-      impl->valid_metadata &= ~nir_metadata_not_properly_reset;
-#endif
+      nir_metadata_preserve(impl, nir_metadata_all);
       return false;
    }
 
@@ -779,7 +777,8 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
       memset(store_blocks, 0,
              BITSET_WORDS(state.impl->num_blocks) * sizeof(*store_blocks));
 
-      assert(node->path.path[0]->var->constant_initializer == NULL);
+      assert(node->path.path[0]->var->constant_initializer == NULL &&
+             node->path.path[0]->var->pointer_initializer == NULL);
 
       if (node->stores) {
          set_foreach(node->stores, store_entry) {

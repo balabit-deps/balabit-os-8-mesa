@@ -29,7 +29,7 @@
 #include "wsi_common.h"
 #include "drm-uapi/drm_fourcc.h"
 
-static PFN_vkVoidFunction
+static VKAPI_PTR PFN_vkVoidFunction
 tu_wsi_proc_addr(VkPhysicalDevice physicalDevice, const char *pName)
 {
    return tu_lookup_entrypoint_unchecked(pName);
@@ -168,7 +168,7 @@ tu_CreateSwapchainKHR(VkDevice _device,
    if (pAllocator)
       alloc = pAllocator;
    else
-      alloc = &device->alloc;
+      alloc = &device->vk.alloc;
 
    return wsi_common_create_swapchain(&device->physical_device->wsi_device,
                                       tu_device_to_handle(device),
@@ -186,7 +186,7 @@ tu_DestroySwapchainKHR(VkDevice _device,
    if (pAllocator)
       alloc = pAllocator;
    else
-      alloc = &device->alloc;
+      alloc = &device->vk.alloc;
 
    wsi_common_destroy_swapchain(_device, swapchain, alloc);
 }

@@ -142,7 +142,7 @@ fd5_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info,
 	/* figure out whether we need to disable LRZ write for binning
 	 * pass using draw pass's fp:
 	 */
-	emit.no_lrz_write = fp->writes_pos || fp->no_earlyz;
+	emit.no_lrz_write = fp->writes_pos || fp->no_earlyz || fp->has_kill;
 
 	emit.binning_pass = false;
 	emit.dirty = dirty;
@@ -229,7 +229,7 @@ fd5_clear_lrz(struct fd_batch *batch, struct fd_resource *zsbuf, double depth)
 			A5XX_RB_MRT_BUF_INFO_COLOR_SWAP(WZYX));
 	OUT_RING(ring, A5XX_RB_MRT_PITCH(zsbuf->lrz_pitch * 2));
 	OUT_RING(ring, A5XX_RB_MRT_ARRAY_PITCH(fd_bo_size(zsbuf->lrz)));
-	OUT_RELOCW(ring, zsbuf->lrz, 0x1000, 0, 0);
+	OUT_RELOC(ring, zsbuf->lrz, 0x1000, 0, 0);
 
 	OUT_PKT4(ring, REG_A5XX_RB_RENDER_CNTL, 1);
 	OUT_RING(ring, 0x00000000);
@@ -318,13 +318,7 @@ fd5_clear(struct fd_context *ctx, unsigned buffers,
 				break;
 			}
 
-			if (util_format_is_pure_uint(pfmt)) {
-				util_format_write_4ui(pfmt, swapped.ui, 0, &uc, 0, 0, 0, 1, 1);
-			} else if (util_format_is_pure_sint(pfmt)) {
-				util_format_write_4i(pfmt, swapped.i, 0, &uc, 0, 0, 0, 1, 1);
-			} else {
-				util_pack_color(swapped.f, pfmt, &uc);
-			}
+			util_pack_color_union(pfmt, &uc, &swapped);
 
 			OUT_PKT4(ring, REG_A5XX_RB_BLIT_CNTL, 1);
 			OUT_RING(ring, A5XX_RB_BLIT_CNTL_BUF(BLIT_MRT0 + i));

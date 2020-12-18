@@ -39,7 +39,7 @@ dest_is_ssa(nir_dest *dest, void *data)
    return dest->is_ssa;
 }
 
-static inline bool
+ASSERTED static inline bool
 instr_each_src_and_dest_is_ssa(const nir_instr *instr)
 {
    if (!nir_foreach_dest((nir_instr *)instr, dest_is_ssa, NULL) ||
@@ -83,7 +83,7 @@ instr_can_rewrite(const nir_instr *instr)
 }
 
 
-#define HASH(hash, data) _mesa_fnv32_1a_accumulate((hash), (data))
+#define HASH(hash, data) XXH32(&(data), sizeof(data), hash)
 
 static uint32_t
 hash_src(uint32_t hash, const nir_src *src)
@@ -198,7 +198,7 @@ hash_load_const(uint32_t hash, const nir_load_const_instr *instr)
       }
    } else {
       unsigned size = instr->def.num_components * sizeof(*instr->value);
-      hash = _mesa_fnv32_1a_accumulate_block(hash, instr->value, size);
+      hash = XXH32(instr->value, size, hash);
    }
 
    return hash;
@@ -246,9 +246,7 @@ hash_intrinsic(uint32_t hash, const nir_intrinsic_instr *instr)
       hash = HASH(hash, instr->dest.ssa.bit_size);
    }
 
-   hash = _mesa_fnv32_1a_accumulate_block(hash, instr->const_index,
-                                          info->num_indices
-                                             * sizeof(instr->const_index[0]));
+   hash = XXH32(instr->const_index, info->num_indices * sizeof(instr->const_index[0]), hash);
    return hash;
 }
 
@@ -274,7 +272,6 @@ hash_tex(uint32_t hash, const nir_tex_instr *instr)
       for (unsigned j = 0; j < 2; ++j)
          hash = HASH(hash, instr->tg4_offsets[i][j]);
    hash = HASH(hash, instr->texture_index);
-   hash = HASH(hash, instr->texture_array_size);
    hash = HASH(hash, instr->sampler_index);
    hash = HASH(hash, instr->texture_non_uniform);
    hash = HASH(hash, instr->sampler_non_uniform);
@@ -292,7 +289,7 @@ static uint32_t
 hash_instr(const void *data)
 {
    const nir_instr *instr = data;
-   uint32_t hash = _mesa_fnv32_1a_offset_bias;
+   uint32_t hash = 0;
 
    switch (instr->type) {
    case nir_instr_type_alu:
@@ -477,7 +474,7 @@ nir_alu_srcs_negative_equal(const nir_alu_instr *alu1,
       return true;
    }
 
-   uint8_t alu1_swizzle[4] = {0};
+   uint8_t alu1_swizzle[NIR_MAX_VEC_COMPONENTS] = {0};
    nir_src alu1_actual_src;
    nir_alu_instr *neg1 = get_neg_instr(alu1->src[src1].src);
 
@@ -494,7 +491,7 @@ nir_alu_srcs_negative_equal(const nir_alu_instr *alu1,
          alu1_swizzle[i] = i;
    }
 
-   uint8_t alu2_swizzle[4] = {0};
+   uint8_t alu2_swizzle[NIR_MAX_VEC_COMPONENTS] = {0};
    nir_src alu2_actual_src;
    nir_alu_instr *neg2 = get_neg_instr(alu2->src[src2].src);
 
@@ -659,7 +656,6 @@ nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
           tex1->is_new_style_shadow != tex2->is_new_style_shadow ||
           tex1->component != tex2->component ||
          tex1->texture_index != tex2->texture_index ||
-         tex1->texture_array_size != tex2->texture_array_size ||
          tex1->sampler_index != tex2->sampler_index) {
          return false;
       }

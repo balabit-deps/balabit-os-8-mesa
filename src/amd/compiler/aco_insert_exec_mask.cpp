@@ -107,10 +107,13 @@ bool pred_by_exec_mask(aco_ptr<Instruction>& instr) {
    if (instr->format == Format::PSEUDO) {
       switch (instr->opcode) {
       case aco_opcode::p_create_vector:
-         return instr->definitions[0].getTemp().type() == RegType::vgpr;
       case aco_opcode::p_extract_vector:
       case aco_opcode::p_split_vector:
-         return instr->operands[0].getTemp().type() == RegType::vgpr;
+         for (Definition def : instr->definitions) {
+            if (def.getTemp().type() == RegType::vgpr)
+               return true;
+         }
+         return false;
       case aco_opcode::p_spill:
       case aco_opcode::p_reload:
          return false;
@@ -162,12 +165,6 @@ void mark_block_wqm(wqm_ctx &ctx, unsigned block_idx)
 
    ctx.branch_wqm[block_idx] = true;
    Block& block = ctx.program->blocks[block_idx];
-   aco_ptr<Instruction>& branch = block.instructions.back();
-
-   if (branch->opcode != aco_opcode::p_branch) {
-      assert(!branch->operands.empty() && branch->operands[0].isTemp());
-      set_needs_wqm(ctx, branch->operands[0].getTemp());
-   }
 
    /* TODO: this sets more branch conditions to WQM than it needs to
     * it should be enough to stop at the "exec mask top level" */
@@ -186,11 +183,14 @@ void get_block_needs(wqm_ctx &ctx, exec_ctx &exec_ctx, Block* block)
 
    if (block->kind & block_kind_top_level) {
       if (ctx.loop && ctx.wqm) {
-         /* mark all break conditions as WQM */
          unsigned block_idx = block->index + 1;
          while (!(ctx.program->blocks[block_idx].kind & block_kind_top_level)) {
+            /* flag all break conditions as WQM:
+             * the conditions might be computed outside the nested CF */
             if (ctx.program->blocks[block_idx].kind & block_kind_break)
                mark_block_wqm(ctx, block_idx);
+            /* flag all blocks as WQM to ensure we enter all (nested) loops in WQM */
+            exec_ctx.info[block_idx].block_needs |= WQM;
             block_idx++;
          }
       } else if (ctx.loop && !ctx.wqm) {
@@ -225,6 +225,11 @@ void get_block_needs(wqm_ctx &ctx, exec_ctx &exec_ctx, Block* block)
             needs = pred_by_exec ? WQM : Unspecified;
             propagate_wqm = true;
          }
+      }
+
+      if (instr->format == Format::PSEUDO_BRANCH && ctx.branch_wqm[block->index]) {
+         needs = WQM;
+         propagate_wqm = true;
       }
 
       if (propagate_wqm) {
@@ -374,7 +379,7 @@ unsigned add_coupling_code(exec_ctx& ctx, Block* block,
       bld.insert(std::move(startpgm));
 
       /* exec seems to need to be manually initialized with combined shaders */
-      if (util_bitcount(ctx.program->stage & sw_mask) > 1) {
+      if (util_bitcount(ctx.program->stage & sw_mask) > 1 || (ctx.program->stage & hw_ngg_gs)) {
          bld.sop1(Builder::s_mov, bld.exec(Definition(exec_mask)), bld.lm == s2 ? Operand(UINT64_MAX) : Operand(UINT32_MAX));
          instructions[0]->definitions.pop_back();
       }
@@ -924,6 +929,11 @@ void add_branch_code(exec_ctx& ctx, Block* block)
                             has_discard);
    }
 
+   /* For normal breaks, this is the exec mask. For discard+break, it's the
+    * old exec mask before it was zero'd.
+    */
+   Operand break_cond = bld.exec(ctx.info[idx].exec.back().first);
+
    if (block->kind & block_kind_discard) {
 
       assert(block->instructions.back()->format == Format::PSEUDO_BRANCH);
@@ -956,8 +966,7 @@ void add_branch_code(exec_ctx& ctx, Block* block)
       }
       assert(!ctx.handle_wqm || (ctx.info[block->index].exec[0].second & mask_type_wqm) == 0);
 
-      if ((block->kind & (block_kind_break | block_kind_uniform)) == block_kind_break)
-         ctx.info[idx].exec.back().first = cond;
+      break_cond = Operand(cond);
       bld.insert(std::move(branch));
       /* no return here as it can be followed by a divergent break */
    }
@@ -976,7 +985,7 @@ void add_branch_code(exec_ctx& ctx, Block* block)
 
       if (need_parallelcopy)
          ctx.info[idx].exec.back().first = bld.pseudo(aco_opcode::p_parallelcopy, bld.def(bld.lm, exec), ctx.info[idx].exec.back().first);
-      bld.branch(aco_opcode::p_cbranch_nz, bld.exec(ctx.info[idx].exec.back().first), block->linear_succs[1], block->linear_succs[0]);
+      bld.branch(aco_opcode::p_cbranch_nz, bld.hint_vcc(bld.def(s2)), bld.exec(ctx.info[idx].exec.back().first), block->linear_succs[1], block->linear_succs[0]);
       return;
    }
 
@@ -1023,7 +1032,7 @@ void add_branch_code(exec_ctx& ctx, Block* block)
       /* add next current exec to the stack */
       ctx.info[idx].exec.emplace_back(then_mask, mask_type);
 
-      bld.branch(aco_opcode::p_cbranch_z, bld.exec(then_mask), block->linear_succs[1], block->linear_succs[0]);
+      bld.branch(aco_opcode::p_cbranch_z, bld.hint_vcc(bld.def(s2)), bld.exec(then_mask), block->linear_succs[1], block->linear_succs[0]);
       return;
    }
 
@@ -1041,7 +1050,7 @@ void add_branch_code(exec_ctx& ctx, Block* block)
       /* add next current exec to the stack */
       ctx.info[idx].exec.emplace_back(else_mask, mask_type);
 
-      bld.branch(aco_opcode::p_cbranch_z, bld.exec(else_mask), block->linear_succs[1], block->linear_succs[0]);
+      bld.branch(aco_opcode::p_cbranch_z, bld.hint_vcc(bld.def(s2)), bld.exec(else_mask), block->linear_succs[1], block->linear_succs[0]);
       return;
    }
 
@@ -1050,13 +1059,12 @@ void add_branch_code(exec_ctx& ctx, Block* block)
       assert(block->instructions.back()->opcode == aco_opcode::p_branch);
       block->instructions.pop_back();
 
-      Temp current_exec = ctx.info[idx].exec.back().first;
       Temp cond = Temp();
       for (int exec_idx = ctx.info[idx].exec.size() - 2; exec_idx >= 0; exec_idx--) {
          cond = bld.tmp(s1);
          Temp exec_mask = ctx.info[idx].exec[exec_idx].first;
          exec_mask = bld.sop2(Builder::s_andn2, bld.def(bld.lm), bld.scc(Definition(cond)),
-                              exec_mask, bld.exec(current_exec));
+                              exec_mask, break_cond);
          ctx.info[idx].exec[exec_idx].first = exec_mask;
          if (ctx.info[idx].exec[exec_idx].second & mask_type_loop)
             break;
@@ -1070,7 +1078,7 @@ void add_branch_code(exec_ctx& ctx, Block* block)
          ctx.info[idx].exec.back().first = bld.sop1(Builder::s_mov, bld.def(bld.lm, exec), Operand(0u));
       }
 
-      bld.branch(aco_opcode::p_cbranch_nz, bld.scc(cond), block->linear_succs[1], block->linear_succs[0]);
+      bld.branch(aco_opcode::p_cbranch_nz, bld.hint_vcc(bld.def(s2)), bld.scc(cond), block->linear_succs[1], block->linear_succs[0]);
       return;
    }
 
@@ -1099,7 +1107,7 @@ void add_branch_code(exec_ctx& ctx, Block* block)
          ctx.info[idx].exec.back().first = bld.sop1(Builder::s_mov, bld.def(bld.lm, exec), Operand(0u));
       }
 
-      bld.branch(aco_opcode::p_cbranch_nz, bld.scc(cond), block->linear_succs[1], block->linear_succs[0]);
+      bld.branch(aco_opcode::p_cbranch_nz, bld.hint_vcc(bld.def(s2)), bld.scc(cond), block->linear_succs[1], block->linear_succs[0]);
       return;
    }
 }

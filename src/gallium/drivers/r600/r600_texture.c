@@ -33,7 +33,7 @@
 #include "util/u_pack_color.h"
 #include "util/u_surface.h"
 #include "util/os_time.h"
-#include "state_tracker/winsys_handle.h"
+#include "frontend/winsys_handle.h"
 #include <errno.h>
 #include <inttypes.h>
 
@@ -243,8 +243,6 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		flags |= RADEON_SURF_SHAREABLE;
 	if (is_imported)
 		flags |= RADEON_SURF_IMPORTED | RADEON_SURF_SHAREABLE;
-	if (!(ptex->flags & R600_RESOURCE_FLAG_FORCE_TILING))
-		flags |= RADEON_SURF_OPTIMIZE_FOR_SPACE;
 
 	r = rscreen->ws->surface_init(rscreen->ws, ptex,
 				      flags, bpe, array_mode, surface);
@@ -521,7 +519,7 @@ static bool r600_texture_get_handle(struct pipe_screen* screen,
 		if (!res->b.is_shared || update_metadata) {
 			r600_texture_init_metadata(rscreen, rtex, &metadata);
 
-			rscreen->ws->buffer_set_metadata(res->buf, &metadata);
+			rscreen->ws->buffer_set_metadata(res->buf, &metadata, NULL);
 		}
 
 		slice_size = (uint64_t)rtex->surface.u.legacy.level[0].slice_size_dw * 4;
@@ -918,7 +916,6 @@ r600_texture_create_object(struct pipe_screen *screen,
 
 	resource = &rtex->resource;
 	resource->b.b = *base;
-	resource->b.b.next = NULL;
 	resource->b.vtbl = &r600_texture_vtbl;
 	pipe_reference_init(&resource->b.b.reference, 1);
 	resource->b.b.screen = screen;
@@ -1135,7 +1132,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	if (!buf)
 		return NULL;
 
-	rscreen->ws->buffer_get_metadata(buf, &metadata);
+	rscreen->ws->buffer_get_metadata(buf, &metadata, NULL);
 	r600_surface_import_metadata(rscreen, &surface, &metadata,
 				     &array_mode, &is_scanout);
 
@@ -1617,8 +1614,6 @@ static void r600_clear_texture(struct pipe_context *pipe,
 	struct r600_texture *rtex = (struct r600_texture*)tex;
 	struct pipe_surface tmpl = {{0}};
 	struct pipe_surface *sf;
-	const struct util_format_description *desc =
-		util_format_description(tex->format);
 
 	tmpl.format = tex->format;
 	tmpl.u.tex.first_layer = box->z;
@@ -1635,11 +1630,11 @@ static void r600_clear_texture(struct pipe_context *pipe,
 
 		/* Depth is always present. */
 		clear = PIPE_CLEAR_DEPTH;
-		desc->unpack_z_float(&depth, 0, data, 0, 1, 1);
+		util_format_unpack_z_float(tex->format, &depth, data, 1);
 
 		if (rtex->surface.has_stencil) {
 			clear |= PIPE_CLEAR_STENCIL;
-			desc->unpack_s_8uint(&stencil, 0, data, 0, 1, 1);
+			util_format_unpack_s_8uint(tex->format, &stencil, data, 1);
 		}
 
 		pipe->clear_depth_stencil(pipe, sf, clear, depth, stencil,
@@ -1648,13 +1643,7 @@ static void r600_clear_texture(struct pipe_context *pipe,
 	} else {
 		union pipe_color_union color;
 
-		/* pipe_color_union requires the full vec4 representation. */
-		if (util_format_is_pure_uint(tex->format))
-			desc->unpack_rgba_uint(color.ui, 0, data, 0, 1, 1);
-		else if (util_format_is_pure_sint(tex->format))
-			desc->unpack_rgba_sint(color.i, 0, data, 0, 1, 1);
-		else
-			desc->unpack_rgba_float(color.f, 0, data, 0, 1, 1);
+		util_format_unpack_rgba(tex->format, color.ui, data, 1);
 
 		if (screen->is_format_supported(screen, tex->format,
 						tex->target, 0, 0,
@@ -1751,12 +1740,8 @@ static void evergreen_set_clear_color(struct r600_texture *rtex,
 		       color->ui[0] == color->ui[2]);
 		uc.ui[0] = color->ui[0];
 		uc.ui[1] = color->ui[3];
-	} else if (util_format_is_pure_uint(surface_format)) {
-		util_format_write_4ui(surface_format, color->ui, 0, &uc, 0, 0, 0, 1, 1);
-	} else if (util_format_is_pure_sint(surface_format)) {
-		util_format_write_4i(surface_format, color->i, 0, &uc, 0, 0, 0, 1, 1);
 	} else {
-		util_pack_color(color->f, surface_format, &uc);
+		util_pack_color_union(surface_format, &uc, color);
 	}
 
 	memcpy(rtex->color_clear_value, &uc, 2 * sizeof(uint32_t));
@@ -1914,7 +1899,7 @@ r600_texture_from_memobj(struct pipe_screen *screen,
 	struct pb_buffer *buf = NULL;
 
 	if (memobj->b.dedicated) {
-		rscreen->ws->buffer_get_metadata(memobj->buf, &metadata);
+		rscreen->ws->buffer_get_metadata(memobj->buf, &metadata, NULL);
 		r600_surface_import_metadata(rscreen, &surface, &metadata,
 				     &array_mode, &is_scanout);
 	} else {

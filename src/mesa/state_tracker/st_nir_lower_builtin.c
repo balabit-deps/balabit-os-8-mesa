@@ -126,7 +126,7 @@ get_variable(lower_builtin_state *state, nir_deref_path *path,
 
    char *name = _mesa_program_state_string(tokens);
 
-   nir_foreach_variable(var, &shader->uniforms) {
+   nir_foreach_uniform_variable(var, shader) {
       if (strcmp(var->name, name) == 0) {
          free(name);
          return var;
@@ -204,7 +204,7 @@ lower_builtin_block(lower_builtin_state *state, nir_block *block)
       nir_ssa_def *def = nir_load_var(b, new_var);
 
       /* swizzle the result: */
-      unsigned swiz[4];
+      unsigned swiz[NIR_MAX_VEC_COMPONENTS] = {0};
       for (unsigned i = 0; i < 4; i++) {
          swiz[i] = GET_SWZ(element->swizzle, i);
          assert(swiz[i] <= SWIZZLE_W);

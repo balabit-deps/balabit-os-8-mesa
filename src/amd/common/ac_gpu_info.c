@@ -33,7 +33,7 @@
 #include <stdio.h>
 
 #include <xf86drm.h>
-#include <amdgpu_drm.h>
+#include "drm-uapi/amdgpu_drm.h"
 
 #include <amdgpu.h>
 
@@ -93,12 +93,54 @@ static bool has_syncobj(int fd)
 	return value ? true : false;
 }
 
+static bool has_timeline_syncobj(int fd)
+{
+	uint64_t value;
+	if (drmGetCap(fd, DRM_CAP_SYNCOBJ_TIMELINE, &value))
+		return false;
+	return value ? true : false;
+}
+
 static uint64_t fix_vram_size(uint64_t size)
 {
 	/* The VRAM size is underreported, so we need to fix it, because
 	 * it's used to compute the number of memory modules for harvesting.
 	 */
 	return align64(size, 256*1024*1024);
+}
+
+static uint32_t
+get_l2_cache_size(enum radeon_family family)
+{
+	switch (family) {
+	case CHIP_KABINI:
+	case CHIP_STONEY:
+		return 128 * 1024;
+	case CHIP_OLAND:
+	case CHIP_HAINAN:
+	case CHIP_ICELAND:
+		return 256 * 1024;
+	case CHIP_PITCAIRN:
+	case CHIP_VERDE:
+	case CHIP_BONAIRE:
+	case CHIP_KAVERI:
+	case CHIP_POLARIS12:
+	case CHIP_CARRIZO:
+		return 512 * 1024;
+	case CHIP_TAHITI:
+	case CHIP_TONGA:
+		return 768 * 1024;
+		break;
+	case CHIP_HAWAII:
+	case CHIP_POLARIS11:
+		return 1024 * 1024;
+	case CHIP_FIJI:
+	case CHIP_POLARIS10:
+		return 2048 * 1024;
+		break;
+	default:
+		return 4096 * 1024;
+	}
 }
 
 bool ac_query_gpu_info(int fd, void *dev_p,
@@ -311,6 +353,7 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 
 	/* Set chip identification. */
 	info->pci_id = amdinfo->asic_id; /* TODO: is this correct? */
+	info->pci_rev_id = amdinfo->pci_rev_id;
 	info->vce_harvest_config = amdinfo->vce_harvest_config;
 
 #define identify_chip2(asic, chipname) \
@@ -366,6 +409,8 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 		identify_chip(NAVI10);
 		identify_chip(NAVI12);
 		identify_chip(NAVI14);
+		identify_chip(SIENNA_CICHLID);
+		identify_chip(NAVY_FLOUNDER);
 		break;
 	}
 
@@ -375,7 +420,9 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 		return false;
 	}
 
-	if (info->family >= CHIP_NAVI10)
+	if (info->family >= CHIP_SIENNA_CICHLID)
+		info->chip_class = GFX10_3;
+	else if (info->family >= CHIP_NAVI10)
 		info->chip_class = GFX10;
 	else if (info->family >= CHIP_VEGA10)
 		info->chip_class = GFX9;
@@ -394,9 +441,9 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 	info->chip_external_rev = amdinfo->chip_external_rev;
 	info->marketing_name = amdgpu_get_marketing_name(dev);
 	info->is_pro_graphics = info->marketing_name &&
-				(!strcmp(info->marketing_name, "Pro") ||
-				 !strcmp(info->marketing_name, "PRO") ||
-				 !strcmp(info->marketing_name, "Frontier"));
+				(strstr(info->marketing_name, "Pro") ||
+				 strstr(info->marketing_name, "PRO") ||
+				 strstr(info->marketing_name, "Frontier"));
 
 	/* Set which chips have dedicated VRAM. */
 	info->has_dedicated_vram =
@@ -410,14 +457,22 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 	else
 		info->max_alloc_size = info->gart_size * 0.7;
 
+	info->vram_type = amdinfo->vram_type;
+	info->vram_bit_width = amdinfo->vram_bit_width;
+	info->ce_ram_size = amdinfo->ce_ram_size;
+
+	info->l2_cache_size = get_l2_cache_size(info->family);
+	info->l1_cache_size = 16384;
+
 	/* Set which chips have uncached device memory. */
 	info->has_l2_uncached = info->chip_class >= GFX9;
 
 	/* Set hardware information. */
 	info->gds_size = gds.gds_total_size;
 	info->gds_gfx_partition_size = gds.gds_gfx_partition_size;
-	/* convert the shader clock from KHz to MHz */
+	/* convert the shader/memory clocks from KHz to MHz */
 	info->max_shader_clock = amdinfo->max_engine_clk / 1000;
+	info->max_memory_clock = amdinfo->max_memory_clk / 1000;
 	info->num_tcc_blocks = device_info.num_tcc_blocks;
 	info->max_se = amdinfo->num_shader_engines;
 	info->max_sh_per_se = amdinfo->num_shader_arrays_per_engine;
@@ -432,6 +487,7 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 		uvd_enc.available_rings ? true : false;
 	info->has_userptr = true;
 	info->has_syncobj = has_syncobj(fd);
+	info->has_timeline_syncobj = has_timeline_syncobj(fd);
 	info->has_syncobj_wait_for_submit = info->has_syncobj && info->drm_minor >= 20;
 	info->has_fence_to_handle = info->has_syncobj && info->drm_minor >= 21;
 	info->has_ctx_priority = info->drm_minor >= 22;
@@ -451,20 +507,27 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 	info->has_unaligned_shader_loads = info->chip_class != GFX6;
 	/* Disable sparse mappings on GFX6 due to VM faults in CP DMA. Enable them once
 	 * these faults are mitigated in software.
-	 * Disable sparse mappings on GFX9 due to hangs.
 	 */
-	info->has_sparse_vm_mappings =
-		info->chip_class >= GFX7 && info->chip_class <= GFX8 &&
-		info->drm_minor >= 13;
+	info->has_sparse_vm_mappings = info->chip_class >= GFX7 && info->drm_minor >= 13;
 	info->has_2d_tiling = true;
 	info->has_read_registers_query = true;
 	info->has_scheduled_fence_dependency = info->drm_minor >= 28;
+	info->mid_command_buffer_preemption_enabled =
+		amdinfo->ids_flags & AMDGPU_IDS_FLAGS_PREEMPTION;
 
 	info->pa_sc_tile_steering_override = device_info.pa_sc_tile_steering_override;
 	info->num_render_backends = amdinfo->rb_pipes;
 	/* The value returned by the kernel driver was wrong. */
 	if (info->family == CHIP_KAVERI)
 		info->num_render_backends = 2;
+
+	/* Guess the number of enabled SEs because the kernel doesn't tell us. */
+	if (info->chip_class >= GFX10_3 && info->max_se > 1) {
+		unsigned num_rbs_per_se = info->num_render_backends / info->max_se;
+		info->num_se = util_bitcount(amdinfo->enabled_rb_pipes_mask) / num_rbs_per_se;
+	} else {
+		info->num_se = info->max_se;
+	}
 
 	info->clock_crystal_freq = amdinfo->gpu_counter_freq;
 	if (!info->clock_crystal_freq) {
@@ -496,6 +559,14 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 	}
 	info->r600_has_virtual_memory = true;
 
+	/* LDS is 64KB per CU (4 SIMDs), which is 16KB per SIMD (usage above
+	 * 16KB makes some SIMDs unoccupied).
+	 *
+	 * LDS is 128KB in WGP mode and 64KB in CU mode. Assume the WGP mode is used.
+	 */
+	info->lds_size_per_workgroup = info->chip_class >= GFX10 ? 128 * 1024 : 64 * 1024;
+	info->lds_granularity = info->chip_class >= GFX7 ? 128 * 4 : 64 * 4;
+
 	assert(util_is_power_of_two_or_zero(dma.available_rings + 1));
 	assert(util_is_power_of_two_or_zero(compute.available_rings + 1));
 
@@ -509,6 +580,17 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 	info->num_rings[RING_VCN_DEC] = util_bitcount(vcn_dec.available_rings);
 	info->num_rings[RING_VCN_ENC] = util_bitcount(vcn_enc.available_rings);
 	info->num_rings[RING_VCN_JPEG] = util_bitcount(vcn_jpeg.available_rings);
+
+	/* This is "align_mask" copied from the kernel, maximums of all IP versions. */
+	info->ib_pad_dw_mask[RING_GFX] = 0xff;
+	info->ib_pad_dw_mask[RING_COMPUTE] = 0xff;
+	info->ib_pad_dw_mask[RING_DMA] = 0xf;
+	info->ib_pad_dw_mask[RING_UVD] = 0xf;
+	info->ib_pad_dw_mask[RING_VCE] = 0x3f;
+	info->ib_pad_dw_mask[RING_UVD_ENC] = 0x3f;
+	info->ib_pad_dw_mask[RING_VCN_DEC] = 0xf;
+	info->ib_pad_dw_mask[RING_VCN_ENC] = 0x3f;
+	info->ib_pad_dw_mask[RING_VCN_JPEG] = 0xf;
 
 	/* The mere presence of CLEAR_STATE in the IB causes random GPU hangs
 	 * on GFX6. Some CLEAR_STATE cause asic hang on radeon kernel, etc.
@@ -534,10 +616,15 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 			        info->family == CHIP_VEGA12 ||
 			        info->family == CHIP_RAVEN ||
 			        info->family == CHIP_RAVEN2 ||
-			        info->family == CHIP_RENOIR);
+			        info->family == CHIP_RENOIR ||
+				info->chip_class >= GFX10_3);
 
 	info->has_out_of_order_rast = info->chip_class >= GFX8 &&
+				      info->chip_class <= GFX9 &&
 				      info->max_se >= 2;
+
+	/* Whether chips support double rate packed math instructions. */
+	info->has_packed_math_16bit = info->chip_class >= GFX9;
 
 	/* TODO: Figure out how to use LOAD_CONTEXT_REG on GFX6-GFX7. */
 	info->has_load_ctx_reg_pkt = info->chip_class >= GFX9 ||
@@ -562,18 +649,34 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 
 	/* Get the number of good compute units. */
 	info->num_good_compute_units = 0;
-	for (i = 0; i < info->max_se; i++)
-		for (j = 0; j < info->max_sh_per_se; j++)
+	for (i = 0; i < info->max_se; i++) {
+		for (j = 0; j < info->max_sh_per_se; j++) {
+			/*
+			 * The cu bitmap in amd gpu info structure is
+			 * 4x4 size array, and it's usually suitable for Vega
+			 * ASICs which has 4*2 SE/SH layout.
+			 * But for Arcturus, SE/SH layout is changed to 8*1.
+			 * To mostly reduce the impact, we make it compatible
+			 * with current bitmap array as below:
+			 *    SE4,SH0 --> cu_bitmap[0][1]
+			 *    SE5,SH0 --> cu_bitmap[1][1]
+			 *    SE6,SH0 --> cu_bitmap[2][1]
+			 *    SE7,SH0 --> cu_bitmap[3][1]
+			 */
+			info->cu_mask[i%4][j+i/4] = amdinfo->cu_bitmap[i%4][j+i/4];
 			info->num_good_compute_units +=
-				util_bitcount(amdinfo->cu_bitmap[i][j]);
-	info->num_good_cu_per_sh = info->num_good_compute_units /
-				   (info->max_se * info->max_sh_per_se);
+				util_bitcount(info->cu_mask[i][j]);
+		}
+	}
 
-	/* Round down to the nearest multiple of 2, because the hw can't
-	 * disable CUs. It can only disable whole WGPs (dual-CUs).
+	/* On GFX10, only whole WGPs (in units of 2 CUs) can be disabled,
+	 * and max - min <= 2.
 	 */
-	if (info->chip_class >= GFX10)
-		info->num_good_cu_per_sh -= info->num_good_cu_per_sh % 2;
+	unsigned cu_group = info->chip_class >= GFX10 ? 2 : 1;
+	info->max_good_cu_per_sa = DIV_ROUND_UP(info->num_good_compute_units,
+						(info->num_se * info->max_sh_per_se * cu_group)) * cu_group;
+	info->min_good_cu_per_sa = (info->num_good_compute_units /
+				    (info->num_se * info->max_sh_per_se * cu_group)) * cu_group;
 
 	memcpy(info->si_tile_mode_array, amdinfo->gb_tile_mode,
 		sizeof(amdinfo->gb_tile_mode));
@@ -590,21 +693,41 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 
 	unsigned ib_align = 0;
 	ib_align = MAX2(ib_align, gfx.ib_start_alignment);
+	ib_align = MAX2(ib_align, gfx.ib_size_alignment);
 	ib_align = MAX2(ib_align, compute.ib_start_alignment);
+	ib_align = MAX2(ib_align, compute.ib_size_alignment);
 	ib_align = MAX2(ib_align, dma.ib_start_alignment);
+	ib_align = MAX2(ib_align, dma.ib_size_alignment);
 	ib_align = MAX2(ib_align, uvd.ib_start_alignment);
+	ib_align = MAX2(ib_align, uvd.ib_size_alignment);
 	ib_align = MAX2(ib_align, uvd_enc.ib_start_alignment);
+	ib_align = MAX2(ib_align, uvd_enc.ib_size_alignment);
 	ib_align = MAX2(ib_align, vce.ib_start_alignment);
+	ib_align = MAX2(ib_align, vce.ib_size_alignment);
 	ib_align = MAX2(ib_align, vcn_dec.ib_start_alignment);
+	ib_align = MAX2(ib_align, vcn_dec.ib_size_alignment);
 	ib_align = MAX2(ib_align, vcn_enc.ib_start_alignment);
+	ib_align = MAX2(ib_align, vcn_enc.ib_size_alignment);
 	ib_align = MAX2(ib_align, vcn_jpeg.ib_start_alignment);
-	assert(ib_align);
-	info->ib_start_alignment = ib_align;
+	ib_align = MAX2(ib_align, vcn_jpeg.ib_size_alignment);
+	/* GFX10 and maybe GFX9 need this alignment for cache coherency. */
+	if (info->chip_class >= GFX9)
+		ib_align = MAX2(ib_align, info->tcc_cache_line_size);
+	/* The kernel pads gfx and compute IBs to 256 dwords since:
+	 *   66f3b2d527154bd258a57c8815004b5964aa1cf5
+	 * Do the same.
+	 */
+	ib_align = MAX2(ib_align, 1024);
+	info->ib_alignment = ib_align;
 
-	if (info->drm_minor >= 31 &&
-	    (info->family == CHIP_RAVEN ||
-	     info->family == CHIP_RAVEN2 ||
-	     info->family == CHIP_RENOIR)) {
+        if ((info->drm_minor >= 31 &&
+             (info->family == CHIP_RAVEN ||
+              info->family == CHIP_RAVEN2 ||
+              info->family == CHIP_RENOIR)) ||
+            (info->drm_minor >= 34 &&
+             (info->family == CHIP_NAVI12 ||
+              info->family == CHIP_NAVI14)) ||
+            info->chip_class >= GFX10_3) {
 		if (info->num_render_backends == 1)
 			info->use_display_dcc_unaligned = true;
 		else
@@ -628,6 +751,8 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 		case CHIP_RENOIR:
 		case CHIP_NAVI10:
 		case CHIP_NAVI12:
+		case CHIP_SIENNA_CICHLID:
+		case CHIP_NAVY_FLOUNDER:
 			pc_lines = 1024;
 			break;
 		case CHIP_NAVI14:
@@ -653,20 +778,44 @@ bool ac_query_gpu_info(int fd, void *dev_p,
 	if (info->chip_class >= GFX10)
 		info->num_sdp_interfaces = device_info.num_tcc_blocks;
 
-	info->max_wave64_per_simd = info->family >= CHIP_POLARIS10 &&
-				    info->family <= CHIP_VEGAM ? 8 : 10;
-
-	/* The number is per SIMD. There is enough SGPRs for the maximum number
-	 * of Wave32, which is double the number for Wave64.
-	 */
-	if (info->chip_class >= GFX10)
-		info->num_physical_sgprs_per_simd = 128 * info->max_wave64_per_simd * 2;
-	else if (info->chip_class >= GFX8)
-		info->num_physical_sgprs_per_simd = 800;
+	if (info->chip_class >= GFX10_3)
+		info->max_wave64_per_simd = 16;
+	else if (info->chip_class == GFX10)
+		info->max_wave64_per_simd = 20;
+	else if (info->family >= CHIP_POLARIS10 && info->family <= CHIP_VEGAM)
+		info->max_wave64_per_simd = 8;
 	else
+		info->max_wave64_per_simd = 10;
+
+	if (info->chip_class >= GFX10) {
+		info->num_physical_sgprs_per_simd = 128 * info->max_wave64_per_simd;
+		info->min_sgpr_alloc = 128;
+		info->sgpr_alloc_granularity = 128;
+		/* Don't use late alloc on small chips. */
+		info->use_late_alloc = info->num_render_backends > 4;
+	} else if (info->chip_class >= GFX8) {
+		info->num_physical_sgprs_per_simd = 800;
+		info->min_sgpr_alloc = 16;
+		info->sgpr_alloc_granularity = 16;
+		info->use_late_alloc = true;
+	} else {
 		info->num_physical_sgprs_per_simd = 512;
+		info->min_sgpr_alloc = 8;
+		info->sgpr_alloc_granularity = 8;
+		/* Potential hang on Kabini: */
+		info->use_late_alloc = info->family != CHIP_KABINI;
+	}
+
+	info->max_sgpr_alloc = info->family == CHIP_TONGA ||
+			       info->family == CHIP_ICELAND ? 96 : 104;
+
+	info->min_wave64_vgpr_alloc = 4;
+	info->max_vgpr_alloc = 256;
+	info->wave64_vgpr_alloc_granularity = 4;
 
 	info->num_physical_wave64_vgprs_per_simd = info->chip_class >= GFX10 ? 512 : 256;
+	info->num_simd_per_compute_unit = info->chip_class >= GFX10 ? 2 : 4;
+
 	return true;
 }
 
@@ -709,6 +858,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    marketing_name = %s\n", info->marketing_name);
 	printf("    is_pro_graphics = %u\n", info->is_pro_graphics);
 	printf("    pci_id = 0x%x\n", info->pci_id);
+	printf("    pci_rev_id = 0x%x\n", info->pci_rev_id);
 	printf("    family = %i\n", info->family);
 	printf("    chip_class = %i\n", info->chip_class);
 	printf("    family_id = %i\n", info->family_id);
@@ -749,6 +899,8 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    gart_size = %i MB\n", (int)DIV_ROUND_UP(info->gart_size, 1024*1024));
 	printf("    vram_size = %i MB\n", (int)DIV_ROUND_UP(info->vram_size, 1024*1024));
 	printf("    vram_vis_size = %i MB\n", (int)DIV_ROUND_UP(info->vram_vis_size, 1024*1024));
+	printf("    vram_type = %i\n", info->vram_type);
+	printf("    vram_bit_width = %i\n", info->vram_bit_width);
 	printf("    gds_size = %u kB\n", info->gds_size / 1024);
 	printf("    gds_gfx_partition_size = %u kB\n", info->gds_gfx_partition_size / 1024);
 	printf("    max_alloc_size = %i MB\n",
@@ -761,10 +913,16 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    tcc_cache_line_size = %u\n", info->tcc_cache_line_size);
 	printf("    tcc_harvested = %u\n", info->tcc_harvested);
 	printf("    pc_lines = %u\n", info->pc_lines);
+	printf("    lds_size_per_workgroup = %u\n", info->lds_size_per_workgroup);
+	printf("    lds_granularity = %i\n", info->lds_granularity);
+	printf("    max_memory_clock = %i\n", info->max_memory_clock);
+	printf("    ce_ram_size = %i\n", info->ce_ram_size);
+	printf("    l1_cache_size = %i\n", info->l1_cache_size);
+	printf("    l2_cache_size = %i\n", info->l2_cache_size);
 
 	printf("CP info:\n");
 	printf("    gfx_ib_pad_with_type2 = %i\n", info->gfx_ib_pad_with_type2);
-	printf("    ib_start_alignment = %u\n", info->ib_start_alignment);
+	printf("    ib_alignment = %u\n", info->ib_alignment);
 	printf("    me_fw_version = %i\n", info->me_fw_version);
 	printf("    me_fw_feature = %i\n", info->me_fw_feature);
 	printf("    pfp_fw_version = %i\n", info->pfp_fw_version);
@@ -785,6 +943,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    has_userptr = %i\n", info->has_userptr);
 	printf("    has_syncobj = %u\n", info->has_syncobj);
 	printf("    has_syncobj_wait_for_submit = %u\n", info->has_syncobj_wait_for_submit);
+	printf("    has_timeline_syncobj = %u\n", info->has_timeline_syncobj);
 	printf("    has_fence_to_handle = %u\n", info->has_fence_to_handle);
 	printf("    has_ctx_priority = %u\n", info->has_ctx_priority);
 	printf("    has_local_buffers = %u\n", info->has_local_buffers);
@@ -803,16 +962,26 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    has_read_registers_query = %u\n", info->has_read_registers_query);
 	printf("    has_gds_ordered_append = %u\n", info->has_gds_ordered_append);
 	printf("    has_scheduled_fence_dependency = %u\n", info->has_scheduled_fence_dependency);
+	printf("    mid_command_buffer_preemption_enabled = %u\n", info->mid_command_buffer_preemption_enabled);
 
 	printf("Shader core info:\n");
 	printf("    max_shader_clock = %i\n", info->max_shader_clock);
 	printf("    num_good_compute_units = %i\n", info->num_good_compute_units);
-	printf("    num_good_cu_per_sh = %i\n", info->num_good_cu_per_sh);
+	printf("    max_good_cu_per_sa = %i\n", info->max_good_cu_per_sa);
+	printf("    min_good_cu_per_sa = %i\n", info->min_good_cu_per_sa);
 	printf("    max_se = %i\n", info->max_se);
+	printf("    num_se = %i\n", info->num_se);
 	printf("    max_sh_per_se = %i\n", info->max_sh_per_se);
 	printf("    max_wave64_per_simd = %i\n", info->max_wave64_per_simd);
 	printf("    num_physical_sgprs_per_simd = %i\n", info->num_physical_sgprs_per_simd);
 	printf("    num_physical_wave64_vgprs_per_simd = %i\n", info->num_physical_wave64_vgprs_per_simd);
+	printf("    num_simd_per_compute_unit = %i\n", info->num_simd_per_compute_unit);
+	printf("    min_sgpr_alloc = %i\n", info->min_sgpr_alloc);
+	printf("    max_sgpr_alloc = %i\n", info->max_sgpr_alloc);
+	printf("    sgpr_alloc_granularity = %i\n", info->sgpr_alloc_granularity);
+	printf("    min_wave64_vgpr_alloc = %i\n", info->min_wave64_vgpr_alloc);
+	printf("    max_vgpr_alloc = %i\n", info->max_vgpr_alloc);
+	printf("    wave64_vgpr_alloc_granularity = %i\n", info->wave64_vgpr_alloc_granularity);
 
 	printf("Render backend info:\n");
 	printf("    pa_sc_tile_steering_override = 0x%x\n", info->pa_sc_tile_steering_override);
@@ -1129,7 +1298,7 @@ unsigned ac_get_compute_resource_limits(struct radeon_info *info,
 
 	if (info->chip_class >= GFX7) {
 		unsigned num_cu_per_se = info->num_good_compute_units /
-					 info->max_se;
+					 info->num_se;
 
 		/* Force even distribution on all SIMDs in CU if the workgroup
 		 * size is 64. This has shown some good improvements if # of CUs

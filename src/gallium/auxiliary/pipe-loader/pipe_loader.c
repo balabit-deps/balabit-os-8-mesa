@@ -33,7 +33,7 @@
 #include "util/u_dl.h"
 #include "util/u_file.h"
 #include "util/xmlconfig.h"
-#include "util/xmlpool.h"
+#include "util/driconf.h"
 
 #include <string.h>
 
@@ -99,7 +99,7 @@ pipe_loader_load_options(struct pipe_loader_device *dev)
 
    driParseOptionInfo(&dev->option_info, xml_options);
    driParseConfigFiles(&dev->option_cache, &dev->option_info, 0,
-                       dev->driver_name, NULL, NULL, 0);
+                       dev->driver_name, NULL, NULL, 0, NULL, 0);
 }
 
 char *

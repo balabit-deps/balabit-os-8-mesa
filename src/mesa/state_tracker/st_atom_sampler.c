@@ -114,9 +114,14 @@ st_convert_sampler(const struct st_context *st,
    sampler->wrap_t = gl_wrap_xlate(msamp->WrapT);
    sampler->wrap_r = gl_wrap_xlate(msamp->WrapR);
 
-   sampler->min_img_filter = gl_filter_to_img_filter(msamp->MinFilter);
+   if (texobj->_IsIntegerFormat && st->ctx->Const.ForceIntegerTexNearest) {
+      sampler->min_img_filter = gl_filter_to_img_filter(GL_NEAREST);
+      sampler->mag_img_filter = gl_filter_to_img_filter(GL_NEAREST);
+   } else {
+      sampler->min_img_filter = gl_filter_to_img_filter(msamp->MinFilter);
+      sampler->mag_img_filter = gl_filter_to_img_filter(msamp->MagFilter);
+   }
    sampler->min_mip_filter = gl_filter_to_mip_filter(msamp->MinFilter);
-   sampler->mag_img_filter = gl_filter_to_img_filter(msamp->MagFilter);
 
    if (texobj->Target != GL_TEXTURE_RECTANGLE_ARB)
       sampler->normalized_coords = 1;
@@ -127,7 +132,7 @@ st_convert_sampler(const struct st_context *st,
     * levels.
     */
    sampler->lod_bias = CLAMP(sampler->lod_bias, -16, 16);
-   sampler->lod_bias = floorf(sampler->lod_bias * 256) / 256;
+   sampler->lod_bias = roundf(sampler->lod_bias * 256) / 256;
 
    sampler->min_lod = MAX2(msamp->MinLod, 0.0f);
    sampler->max_lod = msamp->MaxLod;

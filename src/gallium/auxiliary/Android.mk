@@ -28,14 +28,17 @@ include $(LOCAL_PATH)/Makefile.sources
 
 include $(CLEAR_VARS)
 
+# filter-out tessellator/tessellator.hpp to avoid "Unused source files" error
 LOCAL_SRC_FILES := \
-	$(C_SOURCES) \
+	$(filter-out tessellator/tessellator.hpp, $(C_SOURCES)) \
 	$(NIR_SOURCES) \
 	$(RENDERONLY_SOURCES) \
 	$(VL_STUB_SOURCES)
 
 ifeq ($(USE_LIBBACKTRACE),true)
-	LOCAL_SRC_FILES += util/u_debug_stack_android.cpp
+	LOCAL_CFLAGS += -DHAVE_ANDROID_PLATFORM
+	LOCAL_SHARED_LIBRARIES += libbacktrace
+	LOCAL_SRC_FILES += ../../util/u_debug_stack_android.cpp
 endif
 
 LOCAL_C_INCLUDES := \

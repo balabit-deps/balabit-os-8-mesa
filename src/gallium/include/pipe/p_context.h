@@ -91,7 +91,7 @@ struct pipe_context {
    void *draw;  /**< private, for draw module (temporary?) */
 
    /**
-    * Stream uploaders created by the driver. All drivers, state trackers, and
+    * Stream uploaders created by the driver. All drivers, gallium frontends, and
     * modules should use them.
     *
     * Use u_upload_alloc or u_upload_data as many times as you want.
@@ -219,7 +219,7 @@ struct pipe_context {
    struct pipe_query *(*new_intel_perf_query_obj)(struct pipe_context *pipe,
                                                  unsigned query_index);
 
-   void (*begin_intel_perf_query)(struct pipe_context *pipe, struct pipe_query *q);
+   bool (*begin_intel_perf_query)(struct pipe_context *pipe, struct pipe_query *q);
 
    void (*end_intel_perf_query)(struct pipe_context *pipe, struct pipe_query *q);
 
@@ -469,6 +469,17 @@ struct pipe_context {
 
 
    /**
+    * INTEL_blackhole_render
+    */
+   /*@{*/
+
+   void (*set_frontend_noop)(struct pipe_context *,
+                             bool enable);
+
+   /*@}*/
+
+
+   /**
     * Resource functions for blit-like functionality
     *
     * If a driver supports multisampling, blit must implement color resolve.
@@ -501,12 +512,14 @@ struct pipe_context {
     * The entire buffers are cleared (no scissor, no colormask, etc).
     *
     * \param buffers  bitfield of PIPE_CLEAR_* values.
+    * \param scissor_state  the scissored region to clear
     * \param color  pointer to a union of fiu array for each of r, g, b, a.
     * \param depth  depth clear value in [0,1].
     * \param stencil  stencil clear value
     */
    void (*clear)(struct pipe_context *pipe,
                  unsigned buffers,
+                 const struct pipe_scissor_state *scissor_state,
                  const union pipe_color_union *color,
                  double depth,
                  unsigned stencil);

@@ -34,6 +34,7 @@
 #include "radv_private.h"
 #include "radv_cs.h"
 #include "sid.h"
+#include "util/u_atomic.h"
 
 #define TIMESTAMP_NOT_READY UINT64_MAX
 
@@ -94,7 +95,6 @@ radv_store_availability(nir_builder *b, nir_ssa_def *flags, nir_ssa_def *dst_buf
 	nir_cf_node_insert(b->cursor, &availability_if->cf_node);
 
 	b->cursor = nir_after_cf_list(&availability_if->then_list);
-
 
 	nir_if *store_64bit_if = nir_if_create(b->shader);
 	store_64bit_if->condition = nir_src_for_ssa(result_is_64bit);
@@ -1266,8 +1266,19 @@ radv_query_pool_needs_gds(struct radv_device *device,
 	 * TODO: fix use of NGG GS and non-NGG GS inside the same begin/end
 	 * query.
 	 */
-	return device->physical_device->use_ngg &&
+	return device->physical_device->use_ngg_gs &&
 	       (pool->pipeline_stats_mask & VK_QUERY_PIPELINE_STATISTIC_GEOMETRY_SHADER_PRIMITIVES_BIT);
+}
+
+static void
+radv_destroy_query_pool(struct radv_device *device,
+			const VkAllocationCallbacks *pAllocator,
+			struct radv_query_pool *pool)
+{
+	if (pool->bo)
+		device->ws->buffer_destroy(pool->bo);
+	vk_object_base_finish(&pool->base);
+	vk_free2(&device->vk.alloc, pAllocator, pool);
 }
 
 VkResult radv_CreateQueryPool(
@@ -1277,13 +1288,15 @@ VkResult radv_CreateQueryPool(
 	VkQueryPool*                                pQueryPool)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
-	struct radv_query_pool *pool = vk_alloc2(&device->alloc, pAllocator,
+	struct radv_query_pool *pool = vk_alloc2(&device->vk.alloc, pAllocator,
 					       sizeof(*pool), 8,
 					       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 
 	if (!pool)
 		return vk_error(device->instance, VK_ERROR_OUT_OF_HOST_MEMORY);
 
+	vk_object_base_init(&device->vk, &pool->base,
+			    VK_OBJECT_TYPE_QUERY_POOL);
 
 	switch(pCreateInfo->queryType) {
 	case VK_QUERY_TYPE_OCCLUSION:
@@ -1312,17 +1325,14 @@ VkResult radv_CreateQueryPool(
 	pool->bo = device->ws->buffer_create(device->ws, pool->size,
 					     64, RADEON_DOMAIN_GTT, RADEON_FLAG_NO_INTERPROCESS_SHARING,
 					     RADV_BO_PRIORITY_QUERY_POOL);
-
 	if (!pool->bo) {
-		vk_free2(&device->alloc, pAllocator, pool);
+		radv_destroy_query_pool(device, pAllocator, pool);
 		return vk_error(device->instance, VK_ERROR_OUT_OF_DEVICE_MEMORY);
 	}
 
 	pool->ptr = device->ws->buffer_map(pool->bo);
-
 	if (!pool->ptr) {
-		device->ws->buffer_destroy(pool->bo);
-		vk_free2(&device->alloc, pAllocator, pool);
+		radv_destroy_query_pool(device, pAllocator, pool);
 		return vk_error(device->instance, VK_ERROR_OUT_OF_DEVICE_MEMORY);
 	}
 
@@ -1341,8 +1351,7 @@ void radv_DestroyQueryPool(
 	if (!pool)
 		return;
 
-	device->ws->buffer_destroy(pool->bo);
-	vk_free2(&device->alloc, pAllocator, pool);
+	radv_destroy_query_pool(device, pAllocator, pool);
 }
 
 VkResult radv_GetQueryPoolResults(
@@ -1368,31 +1377,32 @@ VkResult radv_GetQueryPoolResults(
 
 		switch (pool->type) {
 		case VK_QUERY_TYPE_TIMESTAMP: {
-			volatile uint64_t const *src64 = (volatile uint64_t const *)src;
-			available = *src64 != TIMESTAMP_NOT_READY;
+			uint64_t const *src64 = (uint64_t const *)src;
+			uint64_t value;
 
-			if (flags & VK_QUERY_RESULT_WAIT_BIT) {
-				while (*src64 == TIMESTAMP_NOT_READY)
-					;
-				available = true;
-			}
+			do {
+				value = p_atomic_read(src64);
+			} while (value == TIMESTAMP_NOT_READY &&
+			         (flags & VK_QUERY_RESULT_WAIT_BIT));
+
+			available = value != TIMESTAMP_NOT_READY;
 
 			if (!available && !(flags & VK_QUERY_RESULT_PARTIAL_BIT))
 				result = VK_NOT_READY;
 
 			if (flags & VK_QUERY_RESULT_64_BIT) {
 				if (available || (flags & VK_QUERY_RESULT_PARTIAL_BIT))
-					*(uint64_t*)dest = *src64;
+					*(uint64_t*)dest = value;
 				dest += 8;
 			} else {
 				if (available || (flags & VK_QUERY_RESULT_PARTIAL_BIT))
-					*(uint32_t*)dest = *(volatile uint32_t*)src;
+					*(uint32_t*)dest = (uint32_t)value;
 				dest += 4;
 			}
 			break;
 		}
 		case VK_QUERY_TYPE_OCCLUSION: {
-			volatile uint64_t const *src64 = (volatile uint64_t const *)src;
+			uint64_t const *src64 = (uint64_t const *)src;
 			uint32_t db_count = device->physical_device->rad_info.num_render_backends;
 			uint32_t enabled_rb_mask = device->physical_device->rad_info.enabled_rb_mask;
 			uint64_t sample_count = 0;
@@ -1405,8 +1415,8 @@ VkResult radv_GetQueryPoolResults(
 					continue;
 
 				do {
-					start = src64[2 * i];
-					end = src64[2 * i + 1];
+					start = p_atomic_read(src64 + 2 * i);
+					end = p_atomic_read(src64 + 2 * i + 1);
 				} while ((!(start & (1ull << 63)) || !(end & (1ull << 63))) && (flags & VK_QUERY_RESULT_WAIT_BIT));
 
 				if (!(start & (1ull << 63)) || !(end & (1ull << 63)))
@@ -1431,16 +1441,17 @@ VkResult radv_GetQueryPoolResults(
 			break;
 		}
 		case VK_QUERY_TYPE_PIPELINE_STATISTICS: {
-			if (flags & VK_QUERY_RESULT_WAIT_BIT)
-				while(!*(volatile uint32_t*)(pool->ptr + pool->availability_offset + 4 * query))
-					;
-			available = *(volatile uint32_t*)(pool->ptr + pool->availability_offset + 4 * query);
+			const uint32_t *avail_ptr = (const uint32_t*)(pool->ptr + pool->availability_offset + 4 * query);
+
+			do {
+				available = p_atomic_read(avail_ptr);
+			} while (!available && (flags & VK_QUERY_RESULT_WAIT_BIT));
 
 			if (!available && !(flags & VK_QUERY_RESULT_PARTIAL_BIT))
 				result = VK_NOT_READY;
 
-			const volatile uint64_t *start = (uint64_t*)src;
-			const volatile uint64_t *stop = (uint64_t*)(src + pipelinestat_block_size);
+			const uint64_t *start = (uint64_t*)src;
+			const uint64_t *stop = (uint64_t*)(src + pipelinestat_block_size);
 			if (flags & VK_QUERY_RESULT_64_BIT) {
 				uint64_t *dst = (uint64_t*)dest;
 				dest += util_bitcount(pool->pipeline_stats_mask) * 8;
@@ -1468,7 +1479,7 @@ VkResult radv_GetQueryPoolResults(
 			break;
 		}
 		case VK_QUERY_TYPE_TRANSFORM_FEEDBACK_STREAM_EXT: {
-			volatile uint64_t const *src64 = (volatile uint64_t const *)src;
+			uint64_t const *src64 = (uint64_t const *)src;
 			uint64_t num_primitives_written;
 			uint64_t primitive_storage_needed;
 
@@ -1480,7 +1491,7 @@ VkResult radv_GetQueryPoolResults(
 			 */
 			available = 1;
 			for (int j = 0; j < 4; j++) {
-				if (!(src64[j] & 0x8000000000000000UL))
+				if (!(p_atomic_read(src64 + j) & 0x8000000000000000UL))
 					available = 0;
 			}
 
@@ -1674,7 +1685,7 @@ void radv_CmdResetQueryPool(
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	RADV_FROM_HANDLE(radv_query_pool, pool, queryPool);
 	uint32_t value = pool->type == VK_QUERY_TYPE_TIMESTAMP
-			 ? TIMESTAMP_NOT_READY : 0;
+			 ? (uint32_t)TIMESTAMP_NOT_READY : 0;
 	uint32_t flush_bits = 0;
 
 	/* Make sure to sync all previous work if the given command buffer has
@@ -1709,7 +1720,7 @@ void radv_ResetQueryPool(
 	RADV_FROM_HANDLE(radv_query_pool, pool, queryPool);
 
 	uint32_t value = pool->type == VK_QUERY_TYPE_TIMESTAMP
-			 ? TIMESTAMP_NOT_READY : 0;
+			 ? (uint32_t)TIMESTAMP_NOT_READY : 0;
 	uint32_t *data =  (uint32_t*)(pool->ptr + firstQuery * pool->stride);
 	uint32_t *data_end = (uint32_t*)(pool->ptr + (firstQuery + queryCount) * pool->stride);
 

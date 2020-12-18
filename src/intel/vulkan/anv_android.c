@@ -572,8 +572,8 @@ format_supported_with_usage(VkDevice device_h, VkFormat format,
 
 
 static VkResult
-setup_gralloc0_usage(VkFormat format, VkImageUsageFlags imageUsage,
-                     int *grallocUsage)
+setup_gralloc0_usage(struct anv_device *device, VkFormat format,
+                     VkImageUsageFlags imageUsage, int *grallocUsage)
 {
    /* WARNING: Android's libvulkan.so hardcodes the VkImageUsageFlags
     * returned to applications via VkSurfaceCapabilitiesKHR::supportedUsageFlags.
@@ -616,7 +616,7 @@ setup_gralloc0_usage(VkFormat format, VkImageUsageFlags imageUsage,
     */
    switch (format) {
       case VK_FORMAT_B8G8R8A8_UNORM:
-      case VK_FORMAT_B5G6R5_UNORM_PACK16:
+      case VK_FORMAT_R5G6B5_UNORM_PACK16:
       case VK_FORMAT_R8G8B8A8_UNORM:
       case VK_FORMAT_R8G8B8A8_SRGB:
          *grallocUsage |= GRALLOC_USAGE_HW_FB |
@@ -654,7 +654,7 @@ VkResult anv_GetSwapchainGrallocUsage2ANDROID(
       return result;
 
    int32_t grallocUsage = 0;
-   result = setup_gralloc0_usage(format, imageUsage, &grallocUsage);
+   result = setup_gralloc0_usage(device, format, imageUsage, &grallocUsage);
    if (result != VK_SUCCESS)
       return result;
 
@@ -686,6 +686,7 @@ VkResult anv_GetSwapchainGrallocUsageANDROID(
     VkImageUsageFlags   imageUsage,
     int*                grallocUsage)
 {
+   ANV_FROM_HANDLE(anv_device, device, device_h);
    VkResult result;
 
    *grallocUsage = 0;
@@ -695,7 +696,7 @@ VkResult anv_GetSwapchainGrallocUsageANDROID(
    if (result != VK_SUCCESS)
       return result;
 
-   return setup_gralloc0_usage(format, imageUsage, grallocUsage);
+   return setup_gralloc0_usage(device, format, imageUsage, grallocUsage);
 }
 
 VkResult
