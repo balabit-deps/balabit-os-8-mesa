@@ -31,10 +31,6 @@
  * - main interface to GEM in the kernel
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <xf86drm.h>
 #include <util/u_atomic.h>
 #include <fcntl.h>
@@ -177,6 +173,8 @@ struct iris_bufmgr {
    struct util_vma_heap vma_allocator[IRIS_MEMZONE_COUNT];
 
    bool has_llc:1;
+   bool has_mmap_offset:1;
+   bool has_tiling_uapi:1;
    bool bo_reuse:1;
 
    struct gen_aux_map_context *aux_map_ctx;
@@ -192,10 +190,6 @@ static int bo_set_tiling_internal(struct iris_bo *bo, uint32_t tiling_mode,
                                   uint32_t stride);
 
 static void bo_free(struct iris_bo *bo);
-
-static uint64_t vma_alloc(struct iris_bufmgr *bufmgr,
-                          enum iris_memory_zone memzone,
-                          uint64_t size, uint64_t alignment);
 
 static struct iris_bo *
 find_and_ref_external_bo(struct hash_table *ht, unsigned int key)
@@ -338,6 +332,8 @@ vma_free(struct iris_bufmgr *bufmgr,
    /* The binder handles its own allocations. */
    if (memzone == IRIS_MEMZONE_BINDER)
       return;
+
+   assert(memzone < ARRAY_SIZE(bufmgr->vma_allocator));
 
    util_vma_heap_free(&bufmgr->vma_allocator[memzone], address, size);
 }
@@ -485,7 +481,6 @@ alloc_fresh_bo(struct iris_bufmgr *bufmgr, uint64_t bo_size)
    bo->size = bo_size;
    bo->idle = true;
    bo->tiling_mode = I915_TILING_NONE;
-   bo->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
    bo->stride = 0;
 
    /* Calling set_domain() will allocate pages for the BO outside of the
@@ -717,7 +712,6 @@ iris_bo_gem_create_from_name(struct iris_bufmgr *bufmgr,
    p_atomic_set(&bo->refcount, 1);
 
    bo->size = open_arg.size;
-   bo->gtt_offset = 0;
    bo->bufmgr = bufmgr;
    bo->gem_handle = open_arg.handle;
    bo->name = name;
@@ -736,7 +730,6 @@ iris_bo_gem_create_from_name(struct iris_bufmgr *bufmgr,
       goto err_unref;
 
    bo->tiling_mode = get_tiling.tiling_mode;
-   bo->swizzle_mode = get_tiling.swizzle_mode;
 
    /* XXX stride is unknown */
    DBG("bo_create_from_handle: %d (%s)\n", handle, bo->name);
@@ -946,11 +939,74 @@ print_flags(unsigned flags)
 }
 
 static void *
-iris_bo_map_cpu(struct pipe_debug_callback *dbg,
-                struct iris_bo *bo, unsigned flags)
+iris_bo_gem_mmap_legacy(struct pipe_debug_callback *dbg,
+                        struct iris_bo *bo, bool wc)
 {
    struct iris_bufmgr *bufmgr = bo->bufmgr;
 
+   struct drm_i915_gem_mmap mmap_arg = {
+      .handle = bo->gem_handle,
+      .size = bo->size,
+      .flags = wc ? I915_MMAP_WC : 0,
+   };
+
+   int ret = gen_ioctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MMAP, &mmap_arg);
+   if (ret != 0) {
+      DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
+          __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
+      return NULL;
+   }
+   void *map = (void *) (uintptr_t) mmap_arg.addr_ptr;
+
+   return map;
+}
+
+static void *
+iris_bo_gem_mmap_offset(struct pipe_debug_callback *dbg, struct iris_bo *bo,
+                        bool wc)
+{
+   struct iris_bufmgr *bufmgr = bo->bufmgr;
+
+   struct drm_i915_gem_mmap_offset mmap_arg = {
+      .handle = bo->gem_handle,
+      .flags = wc ? I915_MMAP_OFFSET_WC : I915_MMAP_OFFSET_WB,
+   };
+
+   /* Get the fake offset back */
+   int ret = gen_ioctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MMAP_OFFSET, &mmap_arg);
+   if (ret != 0) {
+      DBG("%s:%d: Error preparing buffer %d (%s): %s .\n",
+          __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
+      return NULL;
+   }
+
+   /* And map it */
+   void *map = mmap(0, bo->size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                    bufmgr->fd, mmap_arg.offset);
+   if (map == MAP_FAILED) {
+      DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
+          __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
+      return NULL;
+   }
+
+   return map;
+}
+
+static void *
+iris_bo_gem_mmap(struct pipe_debug_callback *dbg, struct iris_bo *bo, bool wc)
+{
+   struct iris_bufmgr *bufmgr = bo->bufmgr;
+
+   if (bufmgr->has_mmap_offset)
+      return iris_bo_gem_mmap_offset(dbg, bo, wc);
+   else
+      return iris_bo_gem_mmap_legacy(dbg, bo, wc);
+}
+
+static void *
+iris_bo_map_cpu(struct pipe_debug_callback *dbg,
+                struct iris_bo *bo, unsigned flags)
+{
    /* We disallow CPU maps for writing to non-coherent buffers, as the
     * CPU map can become invalidated when a batch is flushed out, which
     * can happen at unpredictable times.  You should use WC maps instead.
@@ -959,18 +1015,11 @@ iris_bo_map_cpu(struct pipe_debug_callback *dbg,
 
    if (!bo->map_cpu) {
       DBG("iris_bo_map_cpu: %d (%s)\n", bo->gem_handle, bo->name);
-
-      struct drm_i915_gem_mmap mmap_arg = {
-         .handle = bo->gem_handle,
-         .size = bo->size,
-      };
-      int ret = gen_ioctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MMAP, &mmap_arg);
-      if (ret != 0) {
-         DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
-             __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
+      void *map = iris_bo_gem_mmap(dbg, bo, false);
+      if (!map) {
          return NULL;
       }
-      void *map = (void *) (uintptr_t) mmap_arg.addr_ptr;
+
       VG_DEFINED(map, bo->size);
 
       if (p_atomic_cmpxchg(&bo->map_cpu, NULL, map)) {
@@ -1015,24 +1064,13 @@ static void *
 iris_bo_map_wc(struct pipe_debug_callback *dbg,
                struct iris_bo *bo, unsigned flags)
 {
-   struct iris_bufmgr *bufmgr = bo->bufmgr;
-
    if (!bo->map_wc) {
       DBG("iris_bo_map_wc: %d (%s)\n", bo->gem_handle, bo->name);
-
-      struct drm_i915_gem_mmap mmap_arg = {
-         .handle = bo->gem_handle,
-         .size = bo->size,
-         .flags = I915_MMAP_WC,
-      };
-      int ret = gen_ioctl(bufmgr->fd, DRM_IOCTL_I915_GEM_MMAP, &mmap_arg);
-      if (ret != 0) {
-         DBG("%s:%d: Error mapping buffer %d (%s): %s .\n",
-             __FILE__, __LINE__, bo->gem_handle, bo->name, strerror(errno));
+      void *map = iris_bo_gem_mmap(dbg, bo, true);
+      if (!map) {
          return NULL;
       }
 
-      void *map = (void *) (uintptr_t) mmap_arg.addr_ptr;
       VG_DEFINED(map, bo->size);
 
       if (p_atomic_cmpxchg(&bo->map_wc, NULL, map)) {
@@ -1079,6 +1117,11 @@ iris_bo_map_gtt(struct pipe_debug_callback *dbg,
                 struct iris_bo *bo, unsigned flags)
 {
    struct iris_bufmgr *bufmgr = bo->bufmgr;
+
+   /* If we don't support get/set_tiling, there's no support for GTT mapping
+    * either (it won't do any de-tiling for us).
+    */
+   assert(bufmgr->has_tiling_uapi);
 
    /* Get a mapping of the buffer if we haven't before. */
    if (bo->map_gtt == NULL) {
@@ -1307,6 +1350,15 @@ bo_set_tiling_internal(struct iris_bo *bo, uint32_t tiling_mode,
        tiling_mode == bo->tiling_mode && stride == bo->stride)
       return 0;
 
+   /* If we can't do map_gtt, the set/get_tiling API isn't useful. And it's
+    * actually not supported by the kernel in those cases.
+    */
+   if (!bufmgr->has_tiling_uapi) {
+      bo->tiling_mode = tiling_mode;
+      bo->stride = stride;
+      return 0;
+   }
+
    memset(&set_tiling, 0, sizeof(set_tiling));
    do {
       /* set_tiling is slightly broken and overwrites the
@@ -1323,23 +1375,13 @@ bo_set_tiling_internal(struct iris_bo *bo, uint32_t tiling_mode,
       return -errno;
 
    bo->tiling_mode = set_tiling.tiling_mode;
-   bo->swizzle_mode = set_tiling.swizzle_mode;
    bo->stride = set_tiling.stride;
-   return 0;
-}
-
-int
-iris_bo_get_tiling(struct iris_bo *bo, uint32_t *tiling_mode,
-                  uint32_t *swizzle_mode)
-{
-   *tiling_mode = bo->tiling_mode;
-   *swizzle_mode = bo->swizzle_mode;
    return 0;
 }
 
 struct iris_bo *
 iris_bo_import_dmabuf(struct iris_bufmgr *bufmgr, int prime_fd,
-                      uint32_t tiling, uint32_t stride)
+                      int tiling)
 {
    uint32_t handle;
    struct iris_bo *bo;
@@ -1382,22 +1424,33 @@ iris_bo_import_dmabuf(struct iris_bufmgr *bufmgr, int prime_fd,
    bo->reusable = false;
    bo->external = true;
    bo->kflags = EXEC_OBJECT_SUPPORTS_48B_ADDRESS | EXEC_OBJECT_PINNED;
-   bo->gtt_offset = vma_alloc(bufmgr, IRIS_MEMZONE_OTHER, bo->size, 1);
+
+   /* From the Bspec, Memory Compression - Gen12:
+    *
+    *    The base address for the surface has to be 64K page aligned and the
+    *    surface is expected to be padded in the virtual domain to be 4 4K
+    *    pages.
+    *
+    * The dmabuf may contain a compressed surface. Align the BO to 64KB just
+    * in case. We always align to 64KB even on platforms where we don't need
+    * to, because it's a fairly reasonable thing to do anyway.
+    */
+   bo->gtt_offset =
+      vma_alloc(bufmgr, IRIS_MEMZONE_OTHER, bo->size, 64 * 1024);
+
    bo->gem_handle = handle;
    _mesa_hash_table_insert(bufmgr->handle_table, &bo->gem_handle, bo);
 
-   struct drm_i915_gem_get_tiling get_tiling = { .handle = bo->gem_handle };
-   if (gen_ioctl(bufmgr->fd, DRM_IOCTL_I915_GEM_GET_TILING, &get_tiling))
-      goto err;
-
-   if (get_tiling.tiling_mode == tiling || tiling > I915_TILING_LAST) {
-      bo->tiling_mode = get_tiling.tiling_mode;
-      bo->swizzle_mode = get_tiling.swizzle_mode;
-       /* XXX stride is unknown */
-   } else {
-      if (bo_set_tiling_internal(bo, tiling, stride)) {
+   if (tiling != -1) {
+      /* Modifiers path */
+      bo->tiling_mode = tiling;
+   } else if (bufmgr->has_tiling_uapi) {
+      struct drm_i915_gem_get_tiling get_tiling = { .handle = bo->gem_handle };
+      if (gen_ioctl(bufmgr->fd, DRM_IOCTL_I915_GEM_GET_TILING, &get_tiling))
          goto err;
-      }
+      bo->tiling_mode = get_tiling.tiling_mode;
+   } else {
+      bo->tiling_mode = I915_TILING_NONE;
    }
 
 out:
@@ -1739,6 +1792,18 @@ static struct gen_mapped_pinned_buffer_alloc aux_map_allocator = {
    .free = gen_aux_map_buffer_free,
 };
 
+static int
+gem_param(int fd, int name)
+{
+   int v = -1; /* No param uses (yet) the sign bit, reserve it for errors */
+
+   struct drm_i915_getparam gp = { .param = name, .value = &v };
+   if (gen_ioctl(fd, DRM_IOCTL_I915_GETPARAM, &gp))
+      return -1;
+
+   return v;
+}
+
 /**
  * Initializes the GEM buffer manager, which uses the kernel to allocate, map,
  * and manage map buffer objections.
@@ -1765,7 +1830,7 @@ iris_bufmgr_create(struct gen_device_info *devinfo, int fd, bool bo_reuse)
     * Don't do this! Ensure that each library/bufmgr has its own device
     * fd so that its namespace does not clash with another.
     */
-   bufmgr->fd = dup(fd);
+   bufmgr->fd = os_dupfd_cloexec(fd);
 
    p_atomic_set(&bufmgr->refcount, 1);
 
@@ -1778,7 +1843,9 @@ iris_bufmgr_create(struct gen_device_info *devinfo, int fd, bool bo_reuse)
    list_inithead(&bufmgr->zombie_list);
 
    bufmgr->has_llc = devinfo->has_llc;
+   bufmgr->has_tiling_uapi = devinfo->has_tiling_uapi;
    bufmgr->bo_reuse = bo_reuse;
+   bufmgr->has_mmap_offset = gem_param(fd, I915_PARAM_MMAP_GTT_VERSION) >= 4;
 
    STATIC_ASSERT(IRIS_MEMZONE_SHADER_START == 0ull);
    const uint64_t _4GB = 1ull << 32;
@@ -1817,7 +1884,7 @@ iris_bufmgr_create(struct gen_device_info *devinfo, int fd, bool bo_reuse)
    bufmgr->handle_table =
       _mesa_hash_table_create(NULL, _mesa_hash_uint, _mesa_key_uint_equal);
 
-   if (devinfo->gen >= 12) {
+   if (devinfo->has_aux_map) {
       bufmgr->aux_map_ctx = gen_aux_map_init(bufmgr, &aux_map_allocator,
                                              devinfo);
       assert(bufmgr->aux_map_ctx);
@@ -1873,7 +1940,8 @@ iris_bufmgr_get_for_fd(struct gen_device_info *devinfo, int fd, bool bo_reuse)
    }
 
    bufmgr = iris_bufmgr_create(devinfo, fd, bo_reuse);
-   list_addtail(&bufmgr->link, &global_bufmgr_list);
+   if (bufmgr)
+      list_addtail(&bufmgr->link, &global_bufmgr_list);
 
  unlock:
    mtx_unlock(&global_bufmgr_list_mutex);

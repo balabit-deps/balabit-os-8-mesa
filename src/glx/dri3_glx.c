@@ -147,7 +147,7 @@ glx_dri3_show_fps(struct loader_dri3_drawable *draw, uint64_t current_ust)
    /* DRI3+Present together uses microseconds for UST. */
    if (priv->previous_ust + interval * 1000000 <= current_ust) {
       if (priv->previous_ust) {
-         fprintf(stderr, "libGL: FPS = %.1f\n",
+         fprintf(stderr, "libGL: FPS = %.2f\n",
                  ((uint64_t) priv->frames * 1000000) /
                  (double)(current_ust - priv->previous_ust));
       }
@@ -593,7 +593,7 @@ dri3_swap_buffers(__GLXDRIdrawable *pdraw, int64_t target_msc, int64_t divisor,
 
    return loader_dri3_swap_buffers_msc(&priv->loader_drawable,
                                        target_msc, divisor, remainder,
-                                       flags, false);
+                                       flags, NULL, 0, false);
 }
 
 static int

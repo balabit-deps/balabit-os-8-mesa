@@ -34,6 +34,7 @@
 
 #include "tgsi/tgsi_parse.h"
 #include "nir/tgsi_to_nir.h"
+#include "util/u_atomic.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
 
@@ -190,7 +191,8 @@ etna_link_shaders(struct etna_context *ctx, struct compiled_shader_state *cs,
 
    cs->GL_VARYING_TOTAL_COMPONENTS =
       VIVS_GL_VARYING_TOTAL_COMPONENTS_NUM(align(total_components, 2));
-   cs->GL_VARYING_NUM_COMPONENTS = num_components[0];
+   cs->GL_VARYING_NUM_COMPONENTS[0] = num_components[0];
+   cs->GL_VARYING_NUM_COMPONENTS[1] = num_components[1];
    cs->GL_VARYING_COMPONENT_USE[0] = component_use[0];
    cs->GL_VARYING_COMPONENT_USE[1] = component_use[1];
 
@@ -393,18 +395,20 @@ etna_create_shader_state(struct pipe_context *pctx,
                          const struct pipe_shader_state *pss)
 {
    struct etna_context *ctx = etna_context(pctx);
+   struct etna_screen *screen = ctx->screen;
+   struct etna_compiler *compiler = screen->compiler;
    struct etna_shader *shader = CALLOC_STRUCT(etna_shader);
 
    if (!shader)
       return NULL;
 
-   static uint32_t id;
-   shader->id = id++;
-   shader->specs = &ctx->specs;
+   shader->id = p_atomic_inc_return(&compiler->shader_count);
+   shader->specs = &screen->specs;
+   shader->compiler = screen->compiler;
 
    if (DBG_ENABLED(ETNA_DBG_NIR))
       shader->nir = (pss->type == PIPE_SHADER_IR_NIR) ? pss->ir.nir :
-                     tgsi_to_nir(pss->tokens, pctx->screen);
+                     tgsi_to_nir(pss->tokens, pctx->screen, false);
    else
       shader->tokens = tgsi_dup_tokens(pss->tokens);
 
@@ -441,6 +445,7 @@ etna_delete_shader_state(struct pipe_context *pctx, void *ss)
          etna_destroy_shader(t);
    }
 
+   tgsi_free_tokens(shader->tokens);
    ralloc_free(shader->nir);
    FREE(shader);
 }

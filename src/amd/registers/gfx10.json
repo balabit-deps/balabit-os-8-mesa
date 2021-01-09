@@ -89,6 +89,32 @@
     {"name": "CB_RESERVED", "value": 7}
    ]
   },
+  "CB_COLOR0_INFO__FORMAT": {
+   "entries": [
+    {"name": "COLOR_INVALID", "value": 0},
+    {"name": "COLOR_8", "value": 1},
+    {"name": "COLOR_16", "value": 2},
+    {"name": "COLOR_8_8", "value": 3},
+    {"name": "COLOR_32", "value": 4},
+    {"name": "COLOR_16_16", "value": 5},
+    {"name": "COLOR_10_11_11", "value": 6},
+    {"name": "COLOR_11_11_10", "value": 7},
+    {"name": "COLOR_10_10_10_2", "value": 8},
+    {"name": "COLOR_2_10_10_10", "value": 9},
+    {"name": "COLOR_8_8_8_8", "value": 10},
+    {"name": "COLOR_32_32", "value": 11},
+    {"name": "COLOR_16_16_16_16", "value": 12},
+    {"name": "COLOR_32_32_32_32", "value": 14},
+    {"name": "COLOR_5_6_5", "value": 16},
+    {"name": "COLOR_1_5_5_5", "value": 17},
+    {"name": "COLOR_5_5_5_1", "value": 18},
+    {"name": "COLOR_4_4_4_4", "value": 19},
+    {"name": "COLOR_8_24", "value": 20},
+    {"name": "COLOR_24_8", "value": 21},
+    {"name": "COLOR_X24_8_32_FLOAT", "value": 22},
+    {"name": "COLOR_5_9_9_9", "value": 24}
+   ]
+  },
   "CBPerfClearFilterSel": {
    "entries": [
     {"name": "CB_PERF_CLEAR_FILTER_SEL_NONCLEAR", "value": 0},
@@ -5313,7 +5339,8 @@
     {"name": "SX_RT_EXPORT_1_5_5_5", "value": 7},
     {"name": "SX_RT_EXPORT_4_4_4_4", "value": 8},
     {"name": "SX_RT_EXPORT_16_16_GR", "value": 9},
-    {"name": "SX_RT_EXPORT_16_16_AR", "value": 10}
+    {"name": "SX_RT_EXPORT_16_16_AR", "value": 10},
+    {"name": "SX_RT_EXPORT_9_9_9_E5", "value": 11}
    ]
   },
   "SX_OPT_COMB_FCN": {
@@ -6319,9 +6346,95 @@
     {"name": "RE_Z", "value": 2},
     {"name": "EARLY_Z_THEN_RE_Z", "value": 3}
    ]
+  },
+  "ThreadTraceRegInclude": {
+    "entries": [
+     {"name": "REG_INCLUDE_SQDEC", "value": 1},
+     {"name": "REG_INCLUDE_SHDEC", "value": 2},
+     {"name": "REG_INCLUDE_GFXUDEC", "value": 4},
+     {"name": "REG_INCLUDE_COMP", "value": 8},
+     {"name": "REG_INCLUDE_CONTEXT", "value": 16},
+     {"name": "REG_INCLUDE_CONFIG", "value": 32},
+     {"name": "REG_INCLUDE_OTHER", "value": 64},
+     {"name": "REG_INCLUDE_READS", "value": 128}
+    ]
+  },
+  "ThreadTraceTokenExclude": {
+    "entries": [
+     {"name": "TOKEN_EXCLUDE_VMEMEXEC", "value": 1},
+     {"name": "TOKEN_EXCLUDE_ALUEXEC", "value": 2},
+     {"name": "TOKEN_EXCLUDE_VALUINST", "value": 4},
+     {"name": "TOKEN_EXCLUDE_WAVERDY", "value": 8},
+     {"name": "TOKEN_EXCLUDE_IMMED1", "value": 16},
+     {"name": "TOKEN_EXCLUDE_IMMEDIATE", "value": 32},
+     {"name": "TOKEN_EXCLUDE_REG", "value": 64},
+     {"name": "TOKEN_EXCLUDE_EVENT", "value": 128},
+     {"name": "TOKEN_EXCLUDE_INST", "value": 256},
+     {"name": "TOKEN_EXCLUDE_UTILCTR", "value": 512},
+     {"name": "TOKEN_EXCLUDE_WAVEALLOC", "value": 1024},
+     {"name": "TOKEN_EXCLUDE_PERF", "value": 2048}
+    ]
   }
  },
  "register_mappings": [
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36096, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_BUF0_BASE",
+   "type_ref": "SQ_THREAD_TRACE_BUF0_BASE"
+  },
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36100, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_BUF0_SIZE",
+   "type_ref": "SQ_THREAD_TRACE_BUF0_SIZE"
+  },
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36112, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_WPTR",
+   "type_ref": "SQ_THREAD_TRACE_WPTR"
+  },
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36116, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_MASK",
+   "type_ref": "SQ_THREAD_TRACE_MASK"
+  },
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36120, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_TOKEN_MASK",
+   "type_ref": "SQ_THREAD_TRACE_TOKEN_MASK"
+  },
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36124, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_CTRL",
+   "type_ref": "SQ_THREAD_TRACE_CTRL"
+  },
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36128, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_STATUS",
+   "type_ref": "SQ_THREAD_TRACE_STATUS"
+  },
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36132, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_DROPPED_CNTR",
+   "type_ref": "SQ_THREAD_TRACE_DROPPED_CNTR"
+  },
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36152, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_HP3D_MARKER_CNTR"
+  },
+  {
+   "chips": ["gfx10"],
+   "map": {"at": 36156, "to": "mm"},
+   "name": "SQ_THREAD_TRACE_STATUS2_GFX103"
+  },
   {
    "chips": ["gfx10"],
    "map": {"at": 37804, "to": "mm"},
@@ -7741,26 +7854,26 @@
   {
    "chips": ["gfx10"],
    "map": {"at": 47248, "to": "mm"},
-   "name": "COMPUTE_PREF_PRI_ACCUM_0",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "COMPUTE_USER_ACCUM_0",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 47252, "to": "mm"},
-   "name": "COMPUTE_PREF_PRI_ACCUM_1",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "COMPUTE_USER_ACCUM_1",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 47256, "to": "mm"},
-   "name": "COMPUTE_PREF_PRI_ACCUM_2",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "COMPUTE_USER_ACCUM_2",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 47260, "to": "mm"},
-   "name": "COMPUTE_PREF_PRI_ACCUM_3",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "COMPUTE_USER_ACCUM_3",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
@@ -14353,98 +14466,98 @@
   {
    "chips": ["gfx10"],
    "map": {"at": 45768, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_ESGS_0",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_ESGS_0",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45772, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_ESGS_1",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_ESGS_1",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45776, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_ESGS_2",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_ESGS_2",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45780, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_ESGS_3",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_ESGS_3",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 46280, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_LSHS_0",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_LSHS_0",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 46284, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_LSHS_1",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_LSHS_1",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 46288, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_LSHS_2",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_LSHS_2",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 46292, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_LSHS_3",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_LSHS_3",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45256, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_PS_0",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_PS_0",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45260, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_PS_1",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_PS_1",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45264, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_PS_2",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_PS_2",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45268, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_PS_3",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_PS_3",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45512, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_VS_0",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_VS_0",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45516, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_VS_1",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_VS_1",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45520, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_VS_2",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_VS_2",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
    "map": {"at": 45524, "to": "mm"},
-   "name": "SPI_SHADER_PREF_PRI_ACCUM_VS_3",
-   "type_ref": "COMPUTE_PREF_PRI_ACCUM_0"
+   "name": "SPI_SHADER_USER_ACCUM_VS_3",
+   "type_ref": "COMPUTE_USER_ACCUM_0"
   },
   {
    "chips": ["gfx10"],
@@ -16296,6 +16409,12 @@
   },
   {
    "chips": ["gfx10"],
+   "map": {"at": 165712, "to": "mm"},
+   "name": "SX_PS_DOWNCONVERT_CONTROL_GFX103",
+   "type_ref": "SX_PS_DOWNCONVERT_CONTROL"
+  },
+  {
+   "chips": ["gfx10"],
    "map": {"at": 165716, "to": "mm"},
    "name": "SX_PS_DOWNCONVERT",
    "type_ref": "SX_PS_DOWNCONVERT"
@@ -17172,13 +17291,15 @@
     {"bits": [14, 17], "name": "LOSSY_ALPHA_PRECISION"},
     {"bits": [18, 18], "name": "DISABLE_CONSTANT_ENCODE_REG"},
     {"bits": [19, 19], "name": "ENABLE_CONSTANT_ENCODE_REG_WRITE"},
-    {"bits": [20, 20], "name": "INDEPENDENT_128B_BLOCKS"}
+    {"bits": [20, 20], "name": "INDEPENDENT_128B_BLOCKS"},
+    {"bits": [21, 21], "name": "SKIP_LOW_COMP_RATIO_GFX103"},
+    {"bits": [22, 22], "name": "DCC_COMPRESS_DISABLE_GFX103"}
    ]
   },
   "CB_COLOR0_INFO": {
    "fields": [
     {"bits": [0, 1], "name": "ENDIAN"},
-    {"bits": [2, 6], "name": "FORMAT"},
+    {"bits": [2, 6], "enum_ref": "CB_COLOR0_INFO__FORMAT", "name": "FORMAT"},
     {"bits": [7, 7], "name": "LINEAR_GENERAL"},
     {"bits": [8, 10], "name": "NUMBER_TYPE"},
     {"bits": [11, 12], "name": "COMP_SWAP"},
@@ -17518,14 +17639,9 @@
     {"bits": [0, 0], "name": "PIPELINESTAT_ENABLE"}
    ]
   },
-  "COMPUTE_PREF_PRI_ACCUM_0": {
+  "COMPUTE_USER_ACCUM_0": {
    "fields": [
-    {"bits": [0, 2], "name": "COEFFICIENT_HIER_SELECT"},
-    {"bits": [3, 5], "name": "CONTRIBUTION_HIER_SELECT"},
-    {"bits": [6, 6], "name": "GROUP_UPDATE_EN"},
-    {"bits": [7, 7], "name": "RESERVED"},
-    {"bits": [8, 15], "name": "COEFFICIENT"},
-    {"bits": [16, 23], "name": "CONTRIBUTION"}
+    {"bits": [0, 6], "name": "CONTRIBUTION"}
    ]
   },
   "COMPUTE_PREF_PRI_CNTR_CTRL": {
@@ -18644,7 +18760,8 @@
     {"bits": [21, 21], "name": "PRESERVE_ZRANGE"},
     {"bits": [22, 22], "name": "PRESERVE_SRESULTS"},
     {"bits": [23, 23], "name": "DISABLE_FAST_PASS"},
-    {"bits": [25, 25], "name": "ALLOW_PARTIAL_RES_HIER_KILL"}
+    {"bits": [25, 25], "name": "ALLOW_PARTIAL_RES_HIER_KILL"},
+    {"bits": [27, 28], "name": "CENTROID_COMPUTATION_MODE_GFX103"}
    ]
   },
   "DB_RMI_L2_CACHE_CONTROL": {
@@ -19355,7 +19472,8 @@
   "PA_CL_NGG_CNTL": {
    "fields": [
     {"bits": [0, 0], "name": "VERTEX_REUSE_OFF"},
-    {"bits": [1, 1], "name": "INDEX_BUF_EDGE_FLAG_ENA"}
+    {"bits": [1, 1], "name": "INDEX_BUF_EDGE_FLAG_ENA"},
+    {"bits": [2, 9], "name": "VERTEX_REUSE_DEPTH_GFX103"}
    ]
   },
   "PA_CL_OBJPRIM_ID_CNTL": {
@@ -19422,8 +19540,9 @@
     {"bits": [23, 23], "name": "VS_OUT_CCDIST1_VEC_ENA"},
     {"bits": [24, 24], "name": "VS_OUT_MISC_SIDE_BUS_ENA"},
     {"bits": [25, 25], "name": "USE_VTX_GS_CUT_FLAG"},
-    {"bits": [26, 26], "name": "USE_VTX_SHD_OBJPRIM_ID"},
-    {"bits": [27, 27], "name": "USE_VTX_LINE_WIDTH"}
+    {"bits": [27, 27], "name": "USE_VTX_LINE_WIDTH"},
+    {"bits": [29, 29], "name": "BYPASS_VTX_RATE_COMBINER_GFX103"},
+    {"bits": [30, 30], "name": "BYPASS_PRIM_RATE_COMBINER_GFX103"}
    ]
   },
   "PA_CL_VTE_CNTL": {
@@ -19469,7 +19588,9 @@
     {"bits": [13, 16], "name": "MAX_SAMPLE_DIST"},
     {"bits": [20, 22], "name": "MSAA_EXPOSED_SAMPLES"},
     {"bits": [24, 25], "name": "DETAIL_TO_EXPOSED_MODE"},
-    {"bits": [26, 27], "enum_ref": "CovToShaderSel", "name": "COVERAGE_TO_SHADER_SELECT"}
+    {"bits": [26, 27], "enum_ref": "CovToShaderSel", "name": "COVERAGE_TO_SHADER_SELECT"},
+    {"bits": [28, 28], "name": "SAMPLE_COVERAGE_ENCODING_GFX103"},
+    {"bits": [29, 29], "name": "COVERED_CENTROID_IS_CENTER_GFX103"}
    ]
   },
   "PA_SC_AA_MASK_X0Y0_X1Y0": {
@@ -21047,6 +21168,75 @@
     {"bits": [0, 0], "name": "FORCE_EN"}
    ]
   },
+  "SQ_THREAD_TRACE_BUF0_BASE": {
+   "fields": [
+    {"bits": [0, 31], "name": "BASE_LO"}
+   ]
+  },
+  "SQ_THREAD_TRACE_BUF0_SIZE": {
+   "fields": [
+    {"bits": [0, 3], "name": "BASE_HI"},
+    {"bits": [8, 29], "name": "SIZE"}
+   ]
+  },
+  "SQ_THREAD_TRACE_WPTR": {
+   "fields": [
+    {"bits": [0, 28], "name": "OFFSET"},
+    {"bits": [31, 31], "name": "BUFFER_ID"}
+   ]
+  },
+  "SQ_THREAD_TRACE_MASK": {
+   "fields": [
+    {"bits": [0, 1], "name": "SIMD_SEL"},
+    {"bits": [4, 7], "name": "WGP_SEL"},
+    {"bits": [9, 9], "name": "SA_SEL"},
+    {"bits": [10, 16], "name": "WTYPE_INCLUDE"}
+   ]
+  },
+  "SQ_THREAD_TRACE_TOKEN_MASK": {
+   "fields": [
+    {"bits": [0, 11], "enum_ref": "ThreadTraceTokenExclude", "name": "TOKEN_EXCLUDE"},
+    {"bits": [16, 23], "enum_ref": "ThreadTraceRegInclude", "name": "REG_INCLUDE"},
+    {"bits": [24, 25], "name": "INST_EXCLUDE"},
+    {"bits": [31, 31], "name": "REG_DETAIL_ALL"}
+   ]
+  },
+  "SQ_THREAD_TRACE_CTRL": {
+   "fields": [
+    {"bits": [0, 1], "name": "MODE"},
+    {"bits": [2, 2], "name": "ALL_VMID"},
+    {"bits": [3, 3], "name": "CH_PERF_END"},
+    {"bits": [4, 4], "name": "INTERRUPT_EN"},
+    {"bits": [5, 5], "name": "DOUBLE_BUFFER"},
+    {"bits": [6, 8], "name": "HIWATER"},
+    {"bits": [9, 9], "name": "REG_STALL_EN"},
+    {"bits": [10, 10], "name": "SPI_STALL_EN"},
+    {"bits": [11, 11], "name": "SQ_STALL_EN"},
+    {"bits": [12, 12], "name": "REG_DROP_ON_STALL"},
+    {"bits": [13, 13], "name": "UTIL_TIMER"},
+    {"bits": [14, 15], "name": "WAVESTART_MODE"},
+    {"bits": [16, 17], "name": "RT_FREQ"},
+    {"bits": [18, 18], "name": "SYNC_COUNT_MARKERS"},
+    {"bits": [19, 19], "name": "SYNC_COUNT_DRAWS"},
+    {"bits": [30, 30], "name": "CAPTURE_ALL"},
+    {"bits": [31, 31], "name": "DRAW_EVENT_EN"}
+   ]
+  },
+  "SQ_THREAD_TRACE_STATUS": {
+   "fields": [
+    {"bits": [0, 11], "name": "FINISH_PENDING"},
+    {"bits": [12, 23], "name": "FINISH_DONE"},
+    {"bits": [24, 24], "name": "UTC_ERR"},
+    {"bits": [25, 25], "name": "BUSY"},
+    {"bits": [26, 26], "name": "EVENT_CNTR_OVERFLOW"},
+    {"bits": [27, 27], "name": "EVENT_CNTR_STALL"}
+   ]
+  },
+  "SQ_THREAD_TRACE_DROPPED_CNTR": {
+   "fields": [
+    {"bits": [0, 31], "name": "CNTR"}
+   ]
+  },
   "SX_BLEND_OPT_CONTROL": {
    "fields": [
     {"bits": [0, 0], "name": "MRT0_COLOR_OPT_DISABLE"},
@@ -21441,6 +21631,18 @@
     {"bits": [10, 19], "name": "PERFCOUNTER_SELECT3"}
    ]
   },
+  "SX_PS_DOWNCONVERT_CONTROL": {
+   "fields": [
+    {"bits": [0, 0], "name": "MRT0_FMT_MAPPING_DISABLE"},
+    {"bits": [1, 1], "name": "MRT1_FMT_MAPPING_DISABLE"},
+    {"bits": [2, 2], "name": "MRT2_FMT_MAPPING_DISABLE"},
+    {"bits": [3, 3], "name": "MRT3_FMT_MAPPING_DISABLE"},
+    {"bits": [4, 4], "name": "MRT4_FMT_MAPPING_DISABLE"},
+    {"bits": [5, 5], "name": "MRT5_FMT_MAPPING_DISABLE"},
+    {"bits": [6, 6], "name": "MRT6_FMT_MAPPING_DISABLE"},
+    {"bits": [7, 7], "name": "MRT7_FMT_MAPPING_DISABLE"}
+   ]
+  },
   "SX_PS_DOWNCONVERT": {
    "fields": [
     {"bits": [0, 3], "enum_ref": "SX_DOWNCONVERT_FORMAT", "name": "MRT0"},
@@ -21696,7 +21898,9 @@
   "VGT_HS_OFFCHIP_PARAM_UMD": {
    "fields": [
     {"bits": [0, 8], "name": "OFFCHIP_BUFFERING"},
-    {"bits": [9, 10], "name": "OFFCHIP_GRANULARITY"}
+    {"bits": [9, 10], "name": "OFFCHIP_GRANULARITY"},
+    {"bits": [0, 9], "name": "OFFCHIP_BUFFERING_GFX103"},
+    {"bits": [10, 11], "name": "OFFCHIP_GRANULARITY_GFX103"}
    ]
   },
   "VGT_INSTANCE_BASE_ID": {

@@ -296,6 +296,7 @@ get_attachment(struct gl_context *ctx, struct gl_framebuffer *fb,
           || (i > 0 && ctx->API == API_OPENGLES)) {
          return NULL;
       }
+      assert(BUFFER_COLOR0 + i < ARRAY_SIZE(fb->Attachment));
       return &fb->Attachment[BUFFER_COLOR0 + i];
    case GL_DEPTH_STENCIL_ATTACHMENT:
       if (!_mesa_is_desktop_gl(ctx) && !_mesa_is_gles3(ctx))
@@ -343,6 +344,7 @@ get_fb0_attachment(struct gl_context *ctx, struct gl_framebuffer *fb,
    }
 
    switch (attachment) {
+   case GL_FRONT:
    case GL_FRONT_LEFT:
       /* Front buffers can be allocated on the first use, but
        * glGetFramebufferAttachmentParameteriv must work even if that
@@ -3037,6 +3039,7 @@ _mesa_bind_framebuffers(struct gl_context *ctx,
       check_begin_texture_render(ctx, newDrawFb);
 
       _mesa_reference_framebuffer(&ctx->DrawBuffer, newDrawFb);
+      _mesa_update_allow_draw_out_of_order(ctx);
    }
 
    if ((bindDrawBuf || bindReadBuf) && ctx->Driver.BindFramebuffer) {
@@ -4813,7 +4816,11 @@ _mesa_GetFramebufferParameterivEXT(GLuint framebuffer, GLenum pname,
          *param = fb->ColorReadBuffer;
       }
       else if (GL_DRAW_BUFFER0 <= pname && pname <= GL_DRAW_BUFFER15) {
-         *param = fb->ColorDrawBuffer[pname - GL_DRAW_BUFFER0];
+         unsigned buffer = pname - GL_DRAW_BUFFER0;
+         if (buffer < ARRAY_SIZE(fb->ColorDrawBuffer))
+            *param = fb->ColorDrawBuffer[buffer];
+         else
+            _mesa_error(ctx, GL_INVALID_ENUM, "glGetFramebufferParameterivEXT(pname)");
       }
       else {
          _mesa_error(ctx, GL_INVALID_ENUM, "glGetFramebufferParameterivEXT(pname)");
@@ -5022,6 +5029,7 @@ get_fb_attachment(struct gl_context *ctx, struct gl_framebuffer *fb,
       const unsigned i = attachment - GL_COLOR_ATTACHMENT0;
       if (i >= ctx->Const.MaxColorAttachments)
          return NULL;
+      assert(BUFFER_COLOR0 + i < ARRAY_SIZE(fb->Attachment));
       return &fb->Attachment[BUFFER_COLOR0 + i];
    }
    case GL_DEPTH:
@@ -5337,7 +5345,7 @@ sample_locations(struct gl_context *ctx, struct gl_framebuffer *fb,
       if (isnan(v[i]))
          fb->SampleLocationTable[start * 2 + i] = 0.5f;
       else
-         fb->SampleLocationTable[start * 2 + i] = CLAMP(v[i], 0.0f, 1.0f);
+         fb->SampleLocationTable[start * 2 + i] = SATURATE(v[i]);
    }
 
    if (fb == ctx->DrawBuffer)

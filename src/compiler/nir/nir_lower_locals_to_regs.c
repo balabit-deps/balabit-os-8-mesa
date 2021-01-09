@@ -45,19 +45,19 @@ struct locals_to_regs_state {
 static uint32_t
 hash_deref(const void *void_deref)
 {
-   uint32_t hash = _mesa_fnv32_1a_offset_bias;
+   uint32_t hash = 0;
 
    for (const nir_deref_instr *deref = void_deref; deref;
         deref = nir_deref_instr_parent(deref)) {
       switch (deref->deref_type) {
       case nir_deref_type_var:
-         return _mesa_fnv32_1a_accumulate(hash, deref->var);
+         return XXH32(&deref->var, sizeof(deref->var), hash);
 
       case nir_deref_type_array:
          continue; /* Do nothing */
 
       case nir_deref_type_struct:
-         hash = _mesa_fnv32_1a_accumulate(hash, deref->strct.index);
+         hash = XXH32(&deref->strct.index, sizeof(deref->strct.index), hash);
          continue;
 
       default:
@@ -101,7 +101,8 @@ get_reg_for_deref(nir_deref_instr *deref, struct locals_to_regs_state *state)
 {
    uint32_t hash = hash_deref(deref);
 
-   assert(nir_deref_instr_get_variable(deref)->constant_initializer == NULL);
+   assert(nir_deref_instr_get_variable(deref)->constant_initializer == NULL &&
+          nir_deref_instr_get_variable(deref)->pointer_initializer == NULL);
 
    struct hash_entry *entry =
       _mesa_hash_table_search_pre_hashed(state->regs_table, hash, deref);

@@ -21,6 +21,7 @@
  * SOFTWARE.
  */
 
+#include "ac_gpu_info.h"
 #include "ac_binary.h"
 
 #include "util/u_math.h"
@@ -39,6 +40,7 @@
 void ac_parse_shader_binary_config(const char *data, size_t nbytes,
 				   unsigned wave_size,
 				   bool really_needs_scratch,
+				   const struct radeon_info *info,
 				   struct ac_shader_config *conf)
 {
 	uint32_t scratch_size = 0;
@@ -58,11 +60,13 @@ void ac_parse_shader_binary_config(const char *data, size_t nbytes,
 				conf->num_vgprs = MAX2(conf->num_vgprs, (G_00B028_VGPRS(value) + 1) * 4);
 
 			conf->num_sgprs = MAX2(conf->num_sgprs, (G_00B028_SGPRS(value) + 1) * 8);
+			/* TODO: LLVM doesn't set FLOAT_MODE for non-compute shaders */
 			conf->float_mode =  G_00B028_FLOAT_MODE(value);
 			conf->rsrc1 = value;
 			break;
 		case R_00B02C_SPI_SHADER_PGM_RSRC2_PS:
 			conf->lds_size = MAX2(conf->lds_size, G_00B02C_EXTRA_LDS_SIZE(value));
+			/* TODO: LLVM doesn't set SHARED_VGPR_CNT for all shader types */
 			conf->num_shared_vgprs = G_00B02C_SHARED_VGPR_CNT(value);
 			conf->rsrc2 = value;
 			break;
@@ -124,4 +128,25 @@ void ac_parse_shader_binary_config(const char *data, size_t nbytes,
 		/* sgprs spills aren't spilling */
 	        conf->scratch_bytes_per_wave = G_00B860_WAVESIZE(scratch_size) * 256 * 4;
 	}
+
+	/* GFX 10.3 internally:
+	 * - aligns VGPRS to 16 for Wave32 and 8 for Wave64
+	 * - aligns LDS to 1024
+	 *
+	 * For shader-db stats, set num_vgprs that the hw actually uses.
+	 */
+	if (info->chip_class >= GFX10_3) {
+		conf->num_vgprs = align(conf->num_vgprs, wave_size == 32 ? 16 : 8);
+	}
+
+	/* Enable 64-bit and 16-bit denormals, because there is no performance
+	 * cost.
+	 *
+	 * Don't enable denormals for 32-bit floats, because:
+	 * - denormals disable output modifiers
+	 * - denormals break v_mad_f32
+	 * - GFX6 & GFX7 would be very slow
+	 */
+	conf->float_mode &= ~V_00B028_FP_ALL_DENORMS;
+	conf->float_mode |= V_00B028_FP_64_DENORMS;
 }

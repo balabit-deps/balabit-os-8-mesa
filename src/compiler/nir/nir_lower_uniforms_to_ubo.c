@@ -65,6 +65,8 @@ lower_instr(nir_intrinsic_instr *instr, nir_builder *b, int multiplier)
       load->num_components = instr->num_components;
       load->src[0] = nir_src_for_ssa(ubo_idx);
       load->src[1] = nir_src_for_ssa(ubo_offset);
+      assert(instr->dest.ssa.bit_size >= 8);
+      nir_intrinsic_set_align(load, instr->dest.ssa.bit_size / 8, 0);
       nir_ssa_dest_init(&load->instr, &load->dest,
                         load->num_components, instr->dest.ssa.bit_size,
                         instr->dest.ssa.name);
@@ -101,8 +103,31 @@ nir_lower_uniforms_to_ubo(nir_shader *shader, int multiplier)
       }
    }
 
+   if (progress) {
+      if (!shader->info.first_ubo_is_default_ubo) {
+         nir_foreach_variable_with_modes(var, shader, nir_var_mem_ubo)
+            var->data.binding++;
+      }
+      shader->info.num_ubos++;
+
+      if (shader->num_uniforms > 0) {
+         const struct glsl_type *type = glsl_array_type(glsl_vec4_type(),
+                                                        shader->num_uniforms, 0);
+         nir_variable *ubo = nir_variable_create(shader, nir_var_mem_ubo, type,
+                                                 "uniform_0");
+         ubo->data.binding = 0;
+
+         struct glsl_struct_field field = {
+            .type = type,
+            .name = "data",
+            .location = -1,
+         };
+         ubo->interface_type =
+               glsl_interface_type(&field, 1, GLSL_INTERFACE_PACKING_STD430,
+                                   false, "__ubo0_interface");
+      }
+   }
+
    shader->info.first_ubo_is_default_ubo = true;
    return progress;
 }
-
-

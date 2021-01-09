@@ -50,7 +50,7 @@
 #include "dri2_priv.h"
 #include "loader.h"
 
-/* From xmlpool/options.h, user exposed so should be stable */
+/* From driconf.h, user exposed so should be stable */
 #define DRI_CONF_VBLANK_NEVER 0
 #define DRI_CONF_VBLANK_DEF_INTERVAL_0 1
 #define DRI_CONF_VBLANK_DEF_INTERVAL_1 2
@@ -776,7 +776,7 @@ static void show_fps(struct dri2_drawable *draw)
 
    if (draw->previous_time + interval * 1000000 <= current_time) {
       if (draw->previous_time) {
-         fprintf(stderr, "libGL: FPS = %.1f\n",
+         fprintf(stderr, "libGL: FPS = %.2f\n",
                  ((uint64_t)draw->frames * 1000000) /
                  (double)(current_time - draw->previous_time));
       }

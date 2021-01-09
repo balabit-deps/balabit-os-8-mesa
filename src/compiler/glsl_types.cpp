@@ -462,6 +462,38 @@ const glsl_type *glsl_type::get_bare_type() const
    unreachable("Invalid base type");
 }
 
+const glsl_type *glsl_type::get_float16_type() const
+{
+   assert(this->base_type == GLSL_TYPE_FLOAT);
+
+   return get_instance(GLSL_TYPE_FLOAT16,
+                       this->vector_elements,
+                       this->matrix_columns,
+                       this->explicit_stride,
+                       this->interface_row_major);
+}
+
+const glsl_type *glsl_type::get_int16_type() const
+{
+   assert(this->base_type == GLSL_TYPE_INT);
+
+   return get_instance(GLSL_TYPE_INT16,
+                       this->vector_elements,
+                       this->matrix_columns,
+                       this->explicit_stride,
+                       this->interface_row_major);
+}
+
+const glsl_type *glsl_type::get_uint16_type() const
+{
+   assert(this->base_type == GLSL_TYPE_UINT);
+
+   return get_instance(GLSL_TYPE_UINT16,
+                       this->vector_elements,
+                       this->matrix_columns,
+                       this->explicit_stride,
+                       this->interface_row_major);
+}
 
 static void
 hash_free_type_function(struct hash_entry *entry)
@@ -1077,6 +1109,10 @@ glsl_type::record_compare(const glsl_type *b, bool match_name,
    if (this->interface_row_major != b->interface_row_major)
       return false;
 
+
+   if (this->packed != b->packed)
+      return false;
+
    /* From the GLSL 4.20 specification (Sec 4.2):
     *
     *     "Structures must have the same name, sequence of type names, and
@@ -1657,7 +1693,7 @@ glsl_type::can_implicitly_convert_to(const glsl_type *desired,
     * state-dependent checks have already happened though, so allow anything
     * that's allowed in any shader version.
     */
-   if ((!state || state->has_implicit_uint_to_int_conversion()) &&
+   if ((!state || state->has_implicit_int_to_uint_conversion()) &&
          desired->base_type == GLSL_TYPE_UINT && this->base_type == GLSL_TYPE_INT)
       return true;
 
@@ -2582,29 +2618,8 @@ glsl_type::count_dword_slots(bool is_bindless) const
 int
 glsl_type::coordinate_components() const
 {
-   int size;
-
-   switch (sampler_dimensionality) {
-   case GLSL_SAMPLER_DIM_1D:
-   case GLSL_SAMPLER_DIM_BUF:
-      size = 1;
-      break;
-   case GLSL_SAMPLER_DIM_2D:
-   case GLSL_SAMPLER_DIM_RECT:
-   case GLSL_SAMPLER_DIM_MS:
-   case GLSL_SAMPLER_DIM_EXTERNAL:
-   case GLSL_SAMPLER_DIM_SUBPASS:
-      size = 2;
-      break;
-   case GLSL_SAMPLER_DIM_3D:
-   case GLSL_SAMPLER_DIM_CUBE:
-      size = 3;
-      break;
-   default:
-      assert(!"Should not get here.");
-      size = 1;
-      break;
-   }
+   enum glsl_sampler_dim dim = (enum glsl_sampler_dim)sampler_dimensionality;
+   int size = glsl_get_sampler_dim_coordinate_components(dim);
 
    /* Array textures need an additional component for the array index, except
     * for cubemap array images that behave like a 2D array of interleaved
@@ -2630,16 +2645,6 @@ glsl_type::coordinate_components() const
 
 #include "compiler/builtin_type_macros.h"
 /** @} */
-
-static void
-get_struct_type_field_and_pointer_sizes(size_t *s_field_size,
-                                        size_t *s_field_ptrs)
-{
-   *s_field_size = sizeof(glsl_struct_field);
-   *s_field_ptrs =
-     sizeof(((glsl_struct_field *)0)->type) +
-     sizeof(((glsl_struct_field *)0)->name);
-}
 
 union packed_type {
    uint32_t u32;
@@ -2670,6 +2675,32 @@ union packed_type {
       unsigned length:24;
    } strct;
 };
+
+static void
+encode_glsl_struct_field(blob *blob, const glsl_struct_field *struct_field)
+{
+   encode_type_to_blob(blob, struct_field->type);
+   blob_write_string(blob, struct_field->name);
+   blob_write_uint32(blob, struct_field->location);
+   blob_write_uint32(blob, struct_field->offset);
+   blob_write_uint32(blob, struct_field->xfb_buffer);
+   blob_write_uint32(blob, struct_field->xfb_stride);
+   blob_write_uint32(blob, struct_field->image_format);
+   blob_write_uint32(blob, struct_field->flags);
+}
+
+static void
+decode_glsl_struct_field_from_blob(blob_reader *blob, glsl_struct_field *struct_field)
+{
+   struct_field->type = decode_type_from_blob(blob);
+   struct_field->name = blob_read_string(blob);
+   struct_field->location = blob_read_uint32(blob);
+   struct_field->offset = blob_read_uint32(blob);
+   struct_field->xfb_buffer = blob_read_uint32(blob);
+   struct_field->xfb_stride = blob_read_uint32(blob);
+   struct_field->image_format = (pipe_format)blob_read_uint32(blob);
+   struct_field->flags = blob_read_uint32(blob);
+}
 
 void
 encode_type_to_blob(struct blob *blob, const glsl_type *type)
@@ -2760,18 +2791,8 @@ encode_type_to_blob(struct blob *blob, const glsl_type *type)
       if (encoded.strct.length == 0xffffff)
          blob_write_uint32(blob, type->length);
 
-      size_t s_field_size, s_field_ptrs;
-      get_struct_type_field_and_pointer_sizes(&s_field_size, &s_field_ptrs);
-
-      for (unsigned i = 0; i < type->length; i++) {
-         encode_type_to_blob(blob, type->fields.structure[i].type);
-         blob_write_string(blob, type->fields.structure[i].name);
-
-         /* Write the struct field skipping the pointers */
-         blob_write_bytes(blob,
-                          ((char *)&type->fields.structure[i]) + s_field_ptrs,
-                          s_field_size - s_field_ptrs);
-      }
+      for (unsigned i = 0; i < type->length; i++)
+         encode_glsl_struct_field(blob, &type->fields.structure[i]);
       return;
    case GLSL_TYPE_VOID:
       break;
@@ -2853,18 +2874,10 @@ decode_type_from_blob(struct blob_reader *blob)
       if (num_fields == 0xffffff)
          num_fields = blob_read_uint32(blob);
 
-      size_t s_field_size, s_field_ptrs;
-      get_struct_type_field_and_pointer_sizes(&s_field_size, &s_field_ptrs);
-
       glsl_struct_field *fields =
-         (glsl_struct_field *) malloc(s_field_size * num_fields);
-      for (unsigned i = 0; i < num_fields; i++) {
-         fields[i].type = decode_type_from_blob(blob);
-         fields[i].name = blob_read_string(blob);
-
-         blob_copy_bytes(blob, ((uint8_t *) &fields[i]) + s_field_ptrs,
-                         s_field_size - s_field_ptrs);
-      }
+         (glsl_struct_field *) malloc(sizeof(glsl_struct_field) * num_fields);
+      for (unsigned i = 0; i < num_fields; i++)
+         decode_glsl_struct_field_from_blob(blob, &fields[i]);
 
       const glsl_type *t;
       if (base_type == GLSL_TYPE_INTERFACE) {
@@ -2936,4 +2949,30 @@ glsl_type::cl_size() const
       return size;
    }
    return 1;
+}
+
+extern "C" {
+
+int
+glsl_get_sampler_dim_coordinate_components(enum glsl_sampler_dim dim)
+{
+   switch (dim) {
+   case GLSL_SAMPLER_DIM_1D:
+   case GLSL_SAMPLER_DIM_BUF:
+      return 1;
+   case GLSL_SAMPLER_DIM_2D:
+   case GLSL_SAMPLER_DIM_RECT:
+   case GLSL_SAMPLER_DIM_MS:
+   case GLSL_SAMPLER_DIM_EXTERNAL:
+   case GLSL_SAMPLER_DIM_SUBPASS:
+   case GLSL_SAMPLER_DIM_SUBPASS_MS:
+      return 2;
+   case GLSL_SAMPLER_DIM_3D:
+   case GLSL_SAMPLER_DIM_CUBE:
+      return 3;
+   default:
+      unreachable("Unknown sampler dim");
+   }
+}
+
 }

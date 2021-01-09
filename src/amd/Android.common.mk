@@ -20,6 +20,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+ifeq ($(MESA_ENABLE_LLVM),true)
+
 # ---------------------------------------
 # Build libmesa_amd_common
 # ---------------------------------------
@@ -67,6 +69,20 @@ $(intermediates)/common/amdgfxregs.h: $(AMDGFXREGS) $(AMDGFXREGS_INPUTS)
 	@echo "Gen Header: $(PRIVATE_MODULE) <= $(notdir $(@))"
 	$(hide) $(MESA_PYTHON2) $(AMDGFXREGS) $(AMDGFXREGS_INPUTS) --sort address --guard AMDGFXREGS_H > $@ || ($(RM) $@; false)
 
+GEN10_FORMAT_TABLE_INPUTS := \
+	$(MESA_TOP)/src/util/format/u_format.csv \
+	$(MESA_TOP)/src/amd/registers/gfx10-rsrc.json
+
+GEN10_FORMAT_TABLE_DEP := \
+	$(MESA_TOP)/src/amd/registers/regdb.py
+
+GEN10_FORMAT_TABLE := $(LOCAL_PATH)/common/gfx10_format_table.py
+
+$(intermediates)/common/gfx10_format_table.c: $(GEN10_FORMAT_TABLE) $(GEN10_FORMAT_TABLE_INPUTS) $(GEN10_FORMAT_TABLE_DEP)
+	@mkdir -p $(dir $@)
+	@echo "Gen Header: $(PRIVATE_MODULE) <= $(notdir $(@))"
+	$(hide) $(MESA_PYTHON2) $(GEN10_FORMAT_TABLE) $(GEN10_FORMAT_TABLE_INPUTS) > $@ || ($(RM) $@; false)
+
 LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/include \
 	$(MESA_TOP)/src \
@@ -97,3 +113,5 @@ $(call mesa-build-with-llvm)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
+
+endif # MESA_ENABLE_LLVM == true

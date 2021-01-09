@@ -49,6 +49,7 @@ struct radeon_info {
 	const char                  *marketing_name;
 	bool                        is_pro_graphics;
 	uint32_t                    pci_id;
+	uint32_t                    pci_rev_id;
 	enum radeon_family          family;
 	enum chip_class             chip_class;
 	uint32_t                    family_id;
@@ -58,6 +59,7 @@ struct radeon_info {
 	/* Features. */
 	bool                        has_graphics; /* false if the chip is compute-only */
 	uint32_t                    num_rings[NUM_RING_TYPES];
+	uint32_t                    ib_pad_dw_mask[NUM_RING_TYPES];
 	bool                        has_clear_state;
 	bool                        has_distributed_tess;
 	bool                        has_dcc_constant_encode;
@@ -65,6 +67,7 @@ struct radeon_info {
 	bool                        rbplus_allowed; /* if RB+ is allowed */
 	bool                        has_load_ctx_reg_pkt;
 	bool                        has_out_of_order_rast;
+	bool                        has_packed_math_16bit;
 	bool                        cpdma_prefetch_writes_memory;
 	bool                        has_gfx9_scissor_bug;
 	bool                        has_tc_compat_zrange_bug;
@@ -84,6 +87,8 @@ struct radeon_info {
 	uint64_t                    gart_size;
 	uint64_t                    vram_size;
 	uint64_t                    vram_vis_size;
+	uint32_t                    vram_bit_width;
+	uint32_t                    vram_type;
 	unsigned                    gds_size;
 	unsigned                    gds_gfx_partition_size;
 	uint64_t                    max_alloc_size;
@@ -97,10 +102,16 @@ struct radeon_info {
 	uint32_t                    tcc_cache_line_size;
 	bool			    tcc_harvested;
 	unsigned                    pc_lines;
+	uint32_t                    lds_size_per_workgroup;
+	uint32_t                    lds_granularity;
+	uint32_t                    max_memory_clock;
+	uint32_t                    ce_ram_size;
+	uint32_t                    l1_cache_size;
+	uint32_t                    l2_cache_size;
 
 	/* CP info. */
 	bool                        gfx_ib_pad_with_type2;
-	unsigned                    ib_start_alignment;
+	unsigned                    ib_alignment; /* both start and size alignment */
 	uint32_t                    me_fw_version;
 	uint32_t                    me_fw_feature;
 	uint32_t                    pfp_fw_version;
@@ -123,6 +134,7 @@ struct radeon_info {
 	bool                        has_userptr;
 	bool                        has_syncobj;
 	bool                        has_syncobj_wait_for_submit;
+	bool                        has_timeline_syncobj;
 	bool                        has_fence_to_handle;
 	bool                        has_ctx_priority;
 	bool                        has_local_buffers;
@@ -141,17 +153,30 @@ struct radeon_info {
 	bool                        has_read_registers_query;
 	bool                        has_gds_ordered_append;
 	bool                        has_scheduled_fence_dependency;
+	/* Whether SR-IOV is enabled or amdgpu.mcbp=1 was set on the kernel command line. */
+	bool                        mid_command_buffer_preemption_enabled;
 
 	/* Shader cores. */
+	uint32_t                    cu_mask[4][2];
 	uint32_t                    r600_max_quad_pipes; /* wave size / 16 */
 	uint32_t                    max_shader_clock;
 	uint32_t                    num_good_compute_units;
-	uint32_t                    num_good_cu_per_sh;
-	uint32_t                    max_se; /* shader engines */
+	uint32_t                    max_good_cu_per_sa;
+	uint32_t                    min_good_cu_per_sa; /* min != max if SAs have different # of CUs */
+	uint32_t                    max_se; /* number of shader engines incl. disabled ones */
+	uint32_t                    num_se; /* number of enabled shader engines */
 	uint32_t                    max_sh_per_se; /* shader arrays per shader engine */
 	uint32_t                    max_wave64_per_simd;
 	uint32_t                    num_physical_sgprs_per_simd;
 	uint32_t                    num_physical_wave64_vgprs_per_simd;
+	uint32_t                    num_simd_per_compute_unit;
+	uint32_t                    min_sgpr_alloc;
+	uint32_t                    max_sgpr_alloc;
+	uint32_t                    sgpr_alloc_granularity;
+	uint32_t                    min_wave64_vgpr_alloc;
+	uint32_t                    max_vgpr_alloc;
+	uint32_t                    wave64_vgpr_alloc_granularity;
+	bool                        use_late_alloc; /* VS and GS: late pos/param allocation */
 
 	/* Render backends (color + depth blocks). */
 	uint32_t                    r300_num_gb_pipes;

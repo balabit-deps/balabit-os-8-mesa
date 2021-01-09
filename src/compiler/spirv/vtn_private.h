@@ -35,6 +35,7 @@
 #include "util/u_dynarray.h"
 #include "nir_spirv.h"
 #include "spirv.h"
+#include "vtn_generator_ids.h"
 
 struct vtn_builder;
 struct vtn_decoration;
@@ -118,15 +119,16 @@ enum vtn_value_type {
    vtn_value_type_ssa,
    vtn_value_type_extension,
    vtn_value_type_image_pointer,
-   vtn_value_type_sampled_image,
 };
 
 enum vtn_branch_type {
    vtn_branch_type_none,
+   vtn_branch_type_if_merge,
    vtn_branch_type_switch_break,
    vtn_branch_type_switch_fallthrough,
    vtn_branch_type_loop_break,
    vtn_branch_type_loop_continue,
+   vtn_branch_type_loop_back_edge,
    vtn_branch_type_discard,
    vtn_branch_type_return,
 };
@@ -135,11 +137,14 @@ enum vtn_cf_node_type {
    vtn_cf_node_type_block,
    vtn_cf_node_type_if,
    vtn_cf_node_type_loop,
+   vtn_cf_node_type_case,
    vtn_cf_node_type_switch,
+   vtn_cf_node_type_function,
 };
 
 struct vtn_cf_node {
    struct list_head link;
+   struct vtn_cf_node *parent;
    enum vtn_cf_node_type type;
 };
 
@@ -153,6 +158,10 @@ struct vtn_loop {
     * and is where you go when you hit a continue.
     */
    struct list_head cont_body;
+
+   struct vtn_block *header_block;
+   struct vtn_block *cont_block;
+   struct vtn_block *break_block;
 
    SpvLoopControlMask control;
 };
@@ -168,16 +177,18 @@ struct vtn_if {
    enum vtn_branch_type else_type;
    struct list_head else_body;
 
+   struct vtn_block *merge_block;
+
    SpvSelectionControlMask control;
 };
 
 struct vtn_case {
-   struct list_head link;
+   struct vtn_cf_node node;
 
+   struct vtn_block *block;
+
+   enum vtn_branch_type type;
    struct list_head body;
-
-   /* The block that starts this case */
-   struct vtn_block *start_block;
 
    /* The fallthrough case, if any */
    struct vtn_case *fallthrough;
@@ -198,6 +209,8 @@ struct vtn_switch {
    uint32_t selector;
 
    struct list_head cases;
+
+   struct vtn_block *break_block;
 };
 
 struct vtn_block {
@@ -214,6 +227,14 @@ struct vtn_block {
 
    enum vtn_branch_type branch_type;
 
+   /* The CF node for which this is a merge target
+    *
+    * The SPIR-V spec requires that any given block can be the merge target
+    * for at most one merge instruction.  If this block is a merge target,
+    * this points back to the block containing that merge instruction.
+    */
+   struct vtn_cf_node *merge_cf_node;
+
    /** Points to the loop that this block starts (if it starts a loop) */
    struct vtn_loop *loop;
 
@@ -225,7 +246,7 @@ struct vtn_block {
 };
 
 struct vtn_function {
-   struct exec_node node;
+   struct vtn_cf_node node;
 
    struct vtn_type *type;
 
@@ -241,6 +262,24 @@ struct vtn_function {
 
    SpvFunctionControlMask control;
 };
+
+#define VTN_DECL_CF_NODE_CAST(_type)               \
+static inline struct vtn_##_type *                 \
+vtn_cf_node_as_##_type(struct vtn_cf_node *node)   \
+{                                                  \
+   assert(node->type == vtn_cf_node_type_##_type); \
+   return (struct vtn_##_type *)node;              \
+}
+
+VTN_DECL_CF_NODE_CAST(block)
+VTN_DECL_CF_NODE_CAST(loop)
+VTN_DECL_CF_NODE_CAST(if)
+VTN_DECL_CF_NODE_CAST(case)
+VTN_DECL_CF_NODE_CAST(switch)
+VTN_DECL_CF_NODE_CAST(function)
+
+#define vtn_foreach_cf_node(node, cf_list) \
+   list_for_each_entry(struct vtn_cf_node, node, cf_list, link)
 
 typedef bool (*vtn_instruction_handler)(struct vtn_builder *, SpvOp,
                                         const uint32_t *, unsigned);
@@ -269,9 +308,6 @@ struct vtn_ssa_value {
    struct vtn_ssa_value *transposed;
 
    const struct glsl_type *type;
-
-   /* Access qualifiers */
-   enum gl_access_qualifier access;
 };
 
 enum vtn_base_type {
@@ -367,8 +403,11 @@ struct vtn_type {
 
       /* Members for image types */
       struct {
-         /* For images, indicates whether it's sampled or storage */
-         bool sampled;
+         /* GLSL image type for this type.  This is not to be confused with
+          * vtn_type::type which is actually going to be the GLSL type for a
+          * pointer to an image, likely a uint32_t.
+          */
+         const struct glsl_type *glsl_image;
 
          /* Image format for image_load_store type images */
          unsigned image_format;
@@ -436,6 +475,7 @@ enum vtn_variable_mode {
    vtn_variable_mode_function,
    vtn_variable_mode_private,
    vtn_variable_mode_uniform,
+   vtn_variable_mode_atomic_counter,
    vtn_variable_mode_ubo,
    vtn_variable_mode_ssbo,
    vtn_variable_mode_phys_ssbo,
@@ -530,30 +570,33 @@ struct vtn_variable {
    enum gl_access_qualifier access;
 };
 
+const struct glsl_type *
+vtn_type_get_nir_type(struct vtn_builder *b, struct vtn_type *type,
+                      enum vtn_variable_mode mode);
+
 struct vtn_image_pointer {
-   struct vtn_pointer *image;
+   nir_deref_instr *image;
    nir_ssa_def *coord;
    nir_ssa_def *sample;
    nir_ssa_def *lod;
 };
 
-struct vtn_sampled_image {
-   struct vtn_pointer *image; /* Image or array of images */
-   struct vtn_pointer *sampler; /* Sampler */
-};
-
 struct vtn_value {
    enum vtn_value_type value_type;
+
+   /* Workaround for https://gitlab.freedesktop.org/mesa/mesa/-/issues/3406
+    * Only set for OpImage / OpSampledImage. Note that this is in addition
+    * the existence of a NonUniform decoration on this value.*/
+   uint32_t propagated_non_uniform : 1;
+
    const char *name;
    struct vtn_decoration *decoration;
    struct vtn_type *type;
    union {
-      void *ptr;
       char *str;
       nir_constant *constant;
       struct vtn_pointer *pointer;
       struct vtn_image_pointer *image;
-      struct vtn_sampled_image *sampled_image;
       struct vtn_function *func;
       struct vtn_block *block;
       struct vtn_ssa_value *ssa;
@@ -623,11 +666,16 @@ struct vtn_builder {
    unsigned value_id_bound;
    struct vtn_value *values;
 
-   /* True if we should watch out for GLSLang issue #179 */
-   bool wa_glslang_179;
+   /* Information on the origin of the SPIR-V */
+   enum vtn_generator generator_id;
+   SpvSourceLanguage source_lang;
 
    /* True if we need to fix up CS OpControlBarrier */
    bool wa_glslang_cs_barrier;
+
+   /* Workaround discard bugs in HLSL -> SPIR-V compilers */
+   bool uses_demote_to_helper_invocation;
+   bool convert_discard_to_demote;
 
    gl_shader_stage entry_point_stage;
    const char *entry_point_name;
@@ -636,18 +684,22 @@ struct vtn_builder {
    bool variable_pointers;
 
    struct vtn_function *func;
-   struct exec_list functions;
+   struct list_head functions;
 
    /* Current function parameter index */
    unsigned func_param_idx;
 
    bool has_loop_continue;
+   bool has_kill;
 
    /* false by default, set to true by the ContractionOff execution mode */
    bool exact;
 
    /* when a physical memory model is choosen */
    bool physical_ptrs;
+
+   /* memory model specified by OpMemoryModel */
+   unsigned mem_model;
 };
 
 nir_ssa_def *
@@ -665,7 +717,7 @@ vtn_untyped_value(struct vtn_builder *b, uint32_t value_id)
 }
 
 /* Consider not using this function directly and instead use
- * vtn_push_ssa/vtn_push_value_pointer so that appropriate applying of
+ * vtn_push_ssa/vtn_push_pointer so that appropriate applying of
  * decorations is handled by common code.
  */
 static inline struct vtn_value *
@@ -673,6 +725,10 @@ vtn_push_value(struct vtn_builder *b, uint32_t value_id,
                enum vtn_value_type value_type)
 {
    struct vtn_value *val = vtn_untyped_value(b, value_id);
+
+   vtn_fail_if(value_type == vtn_value_type_ssa,
+               "Do not call vtn_push_value for value_type_ssa.  Use "
+               "vtn_push_ssa_value instead.");
 
    vtn_fail_if(val->value_type != vtn_value_type_invalid,
                "SPIR-V id %u has already been written by another instruction",
@@ -733,42 +789,43 @@ vtn_constant_int(struct vtn_builder *b, uint32_t value_id)
    }
 }
 
-static inline enum gl_access_qualifier vtn_value_access(struct vtn_value *value)
+static inline struct vtn_type *
+vtn_get_value_type(struct vtn_builder *b, uint32_t value_id)
 {
-   switch (value->value_type) {
-   case vtn_value_type_invalid:
-   case vtn_value_type_undef:
-   case vtn_value_type_string:
-   case vtn_value_type_decoration_group:
-   case vtn_value_type_constant:
-   case vtn_value_type_function:
-   case vtn_value_type_block:
-   case vtn_value_type_extension:
-      return 0;
-   case vtn_value_type_type:
-      return value->type->access;
-   case vtn_value_type_pointer:
-      return value->pointer->access;
-   case vtn_value_type_ssa:
-      return value->ssa->access;
-   case vtn_value_type_image_pointer:
-      return value->image->image->access;
-   case vtn_value_type_sampled_image:
-      return value->sampled_image->image->access |
-         value->sampled_image->sampler->access;
-   }
+   struct vtn_value *val = vtn_untyped_value(b, value_id);
+   vtn_fail_if(val->type == NULL, "Value %u does not have a type", value_id);
+   return val->type;
+}
 
-   unreachable("invalid type");
+static inline struct vtn_type *
+vtn_get_type(struct vtn_builder *b, uint32_t value_id)
+{
+   return vtn_value(b, value_id, vtn_value_type_type)->type;
 }
 
 struct vtn_ssa_value *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
+struct vtn_value *vtn_push_ssa_value(struct vtn_builder *b, uint32_t value_id,
+                                     struct vtn_ssa_value *ssa);
 
-struct vtn_value *vtn_push_value_pointer(struct vtn_builder *b,
-                                         uint32_t value_id,
-                                         struct vtn_pointer *ptr);
+nir_ssa_def *vtn_get_nir_ssa(struct vtn_builder *b, uint32_t value_id);
+struct vtn_value *vtn_push_nir_ssa(struct vtn_builder *b, uint32_t value_id,
+                                   nir_ssa_def *def);
 
-struct vtn_value *vtn_push_ssa(struct vtn_builder *b, uint32_t value_id,
-                               struct vtn_type *type, struct vtn_ssa_value *ssa);
+struct vtn_value *vtn_push_pointer(struct vtn_builder *b,
+                                   uint32_t value_id,
+                                   struct vtn_pointer *ptr);
+
+struct vtn_sampled_image {
+   nir_deref_instr *image;
+   nir_deref_instr *sampler;
+};
+
+nir_ssa_def *vtn_sampled_image_to_nir_ssa(struct vtn_builder *b,
+                                          struct vtn_sampled_image si);
+
+void
+vtn_copy_value(struct vtn_builder *b, uint32_t src_value_id,
+               uint32_t dst_value_id);
 
 struct vtn_ssa_value *vtn_create_ssa_value(struct vtn_builder *b,
                                            const struct glsl_type *type);
@@ -776,20 +833,7 @@ struct vtn_ssa_value *vtn_create_ssa_value(struct vtn_builder *b,
 struct vtn_ssa_value *vtn_ssa_transpose(struct vtn_builder *b,
                                         struct vtn_ssa_value *src);
 
-nir_ssa_def *vtn_vector_extract(struct vtn_builder *b, nir_ssa_def *src,
-                                unsigned index);
-nir_ssa_def *vtn_vector_extract_dynamic(struct vtn_builder *b, nir_ssa_def *src,
-                                        nir_ssa_def *index);
-nir_ssa_def *vtn_vector_insert(struct vtn_builder *b, nir_ssa_def *src,
-                               nir_ssa_def *insert, unsigned index);
-nir_ssa_def *vtn_vector_insert_dynamic(struct vtn_builder *b, nir_ssa_def *src,
-                                       nir_ssa_def *insert, nir_ssa_def *index);
-
 nir_deref_instr *vtn_nir_deref(struct vtn_builder *b, uint32_t id);
-
-struct vtn_pointer *vtn_pointer_for_variable(struct vtn_builder *b,
-                                             struct vtn_variable *var,
-                                             struct vtn_type *ptr_type);
 
 nir_deref_instr *vtn_pointer_to_deref(struct vtn_builder *b,
                                       struct vtn_pointer *ptr);

@@ -394,7 +394,7 @@ bool brw_try_override_assembly(struct brw_codegen *p, int start_offset,
    p->store = (brw_inst *)reralloc_size(p->mem_ctx, p->store, p->next_insn_offset);
    assert(p->store);
 
-   ssize_t ret = read(fd, p->store + start_offset, sb.st_size);
+   ssize_t ret = read(fd, (char *)p->store + start_offset, sb.st_size);
    close(fd);
    if (ret != sb.st_size) {
       return false;
@@ -531,8 +531,10 @@ static const struct opcode_desc opcode_descs[] = {
    { BRW_OPCODE_GOTO,     46,  "goto",    0,    0,    GEN_GE(GEN8) },
    { BRW_OPCODE_POP,      47,  "pop",     2,    0,    GEN_LE(GEN5) },
    { BRW_OPCODE_WAIT,     48,  "wait",    1,    0,    GEN_LT(GEN12) },
-   { BRW_OPCODE_SEND,     49,  "send",    1,    1,    GEN_ALL },
-   { BRW_OPCODE_SENDC,    50,  "sendc",   1,    1,    GEN_ALL },
+   { BRW_OPCODE_SEND,     49,  "send",    1,    1,    GEN_LT(GEN12) },
+   { BRW_OPCODE_SENDC,    50,  "sendc",   1,    1,    GEN_LT(GEN12) },
+   { BRW_OPCODE_SEND,     49,  "send",    2,    1,    GEN_GE(GEN12) },
+   { BRW_OPCODE_SENDC,    50,  "sendc",   2,    1,    GEN_GE(GEN12) },
    { BRW_OPCODE_SENDS,    51,  "sends",   2,    1,    GEN_GE(GEN9) & GEN_LT(GEN12) },
    { BRW_OPCODE_SENDSC,   52,  "sendsc",  2,    1,    GEN_GE(GEN9) & GEN_LT(GEN12) },
    { BRW_OPCODE_MATH,     56,  "math",    2,    1,    GEN_GE(GEN6) },
