@@ -24,6 +24,8 @@
 #ifndef _AFUC_H_
 #define _AFUC_H_
 
+#include "util/macros.h"
+
 /*
 TODO kernel debugfs to inject packet into rb for easier experimentation.  It
 should trigger reloading pfp/me and resetting gpu..
@@ -33,9 +35,6 @@ should be restricted to CAP_ADMIN and probably compile option too (default=n).
 if flag set, copy cmdstream bo contents into RB instead of IB'ing to it from
 RB.
  */
-
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-#define PACKED __attribute__((__packed__))
 
 /* The opcode is encoded variable length.  Opcodes less than 0x30
  * are encoded as 5 bits followed by (rep) flag.  Opcodes >= 0x30
@@ -109,6 +108,7 @@ typedef enum {
 	OPC_CALL   = 0x35,  /* "function" call */
 	OPC_WIN    = 0x36,  /* wait for input (ie. wait for WPTR to advance) */
 	OPC_PREEMPTLEAVE6 = 0x38,  /* try to leave preemption */
+	OPC_SETSECURE = 0x3b, /* switch secure mode on/off */
 } afuc_opc;
 
 
@@ -128,7 +128,8 @@ typedef union PACKED {
 	} movi;
 	struct PACKED {
 		uint32_t alu     : 5;
-		uint32_t pad     : 6;
+		uint32_t pad     : 4;
+		uint32_t xmov    : 2; /* execute eXtra mov's based on $rem */
 		uint32_t dst     : 5;
 		uint32_t src2    : 5;
 		uint32_t src1    : 5;
@@ -151,6 +152,11 @@ typedef union PACKED {
 		uint32_t uoff    : 26;    /* absolute (unsigned) offset */
 		uint32_t hdr     : 6;
 	} call;
+	struct PACKED {
+		uint32_t pad       : 25;
+		uint32_t interrupt : 1; /* return from ctxt-switch interrupt handler */
+		uint32_t hdr       : 6;
+	} ret;
 	struct PACKED {
 		uint32_t pad     : 26;
 		uint32_t hdr     : 6;

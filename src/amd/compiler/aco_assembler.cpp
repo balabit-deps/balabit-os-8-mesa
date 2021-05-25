@@ -5,6 +5,7 @@
 #include "aco_builder.h"
 #include "common/sid.h"
 #include "ac_shader_util.h"
+#include "util/memstream.h"
 #include "util/u_math.h"
 
 namespace aco {
@@ -17,7 +18,7 @@ struct asm_context {
    const int16_t* opcode;
    // TODO: keep track of branch instructions referring blocks
    // and, when emitting the block, correct the offset in instr
-   asm_context(Program* program) : program(program), chip_class(program->chip_class) {
+   asm_context(Program* program_) : program(program_), chip_class(program->chip_class) {
       if (chip_class <= GFX7)
          opcode = &instr_info.opcode_gfx7[0];
       else if (chip_class <= GFX9)
@@ -81,8 +82,19 @@ void emit_instruction(asm_context& ctx, std::vector<uint32_t>& out, Instruction*
 
    uint32_t opcode = ctx.opcode[(int)instr->opcode];
    if (opcode == (uint32_t)-1) {
-      fprintf(stderr, "Unsupported opcode: ");
-      aco_print_instr(instr, stderr);
+      char *outmem;
+      size_t outsize;
+      struct u_memstream mem;
+      u_memstream_open(&mem, &outmem, &outsize);
+      FILE *const memf = u_memstream_get(&mem);
+
+      fprintf(memf, "Unsupported opcode: ");
+      aco_print_instr(instr, memf);
+      u_memstream_close(&mem);
+
+      aco_err(ctx.program, outmem);
+      free(outmem);
+
       abort();
    }
 
@@ -439,11 +451,11 @@ void emit_instruction(asm_context& ctx, std::vector<uint32_t>& out, Instruction*
       encoding = (0xFF & instr->operands[2].physReg()); /* VADDR */
       if (!instr->definitions.empty()) {
          encoding |= (0xFF & instr->definitions[0].physReg()) << 8; /* VDATA */
-      } else if (instr->operands[1].regClass().type() == RegType::vgpr) {
-         encoding |= (0xFF & instr->operands[1].physReg()) << 8; /* VDATA */
+      } else if (instr->operands.size() >= 4) {
+         encoding |= (0xFF & instr->operands[3].physReg()) << 8; /* VDATA */
       }
       encoding |= (0x1F & (instr->operands[0].physReg() >> 2)) << 16; /* T# (resource) */
-      if (instr->operands[1].regClass().type() == RegType::sgpr)
+      if (!instr->operands[1].isUndefined())
          encoding |= (0x1F & (instr->operands[1].physReg() >> 2)) << 21; /* sampler */
 
       assert(!mimg->d16 || ctx.chip_class >= GFX9);
@@ -600,7 +612,7 @@ void emit_instruction(asm_context& ctx, std::vector<uint32_t>& out, Instruction*
          encoding |= opcode << 16;
          encoding |= (vop3->clamp ? 1 : 0) << 15;
          encoding |= vop3->opsel_lo << 11;
-         encoding |= (vop3->opsel_hi & 0x4) ? 1 : 0 << 14;
+         encoding |= ((vop3->opsel_hi & 0x4) ? 1 : 0) << 14;
          for (unsigned i = 0; i < 3; i++)
             encoding |= vop3->neg_hi[i] << (8+i);
          encoding |= (0xFF & instr->definitions[0].physReg());
@@ -608,7 +620,7 @@ void emit_instruction(asm_context& ctx, std::vector<uint32_t>& out, Instruction*
          encoding = 0;
          for (unsigned i = 0; i < instr->operands.size(); i++)
             encoding |= instr->operands[i].physReg() << (i * 9);
-         encoding |= vop3->opsel_hi & 0x3 << 27;
+         encoding |= (vop3->opsel_hi & 0x3) << 27;
          for (unsigned i = 0; i < 3; i++)
             encoding |= vop3->neg_lo[i] << (29+i);
          out.push_back(encoding);
@@ -720,7 +732,7 @@ void fix_exports(asm_context& ctx, std::vector<uint32_t>& out, Program* program)
       {
          if ((*it)->format == Format::EXP) {
             Export_instruction* exp = static_cast<Export_instruction*>((*it).get());
-            if (program->stage & (hw_vs | hw_ngg_gs)) {
+            if (program->stage.hw == HWStage::VS || program->stage.hw == HWStage::NGG) {
                if (exp->dest >= V_008DFC_SQ_EXP_POS && exp->dest <= (V_008DFC_SQ_EXP_POS + 3)) {
                   exp->done = true;
                   exported = true;
@@ -740,7 +752,8 @@ void fix_exports(asm_context& ctx, std::vector<uint32_t>& out, Program* program)
 
    if (!exported) {
       /* Abort in order to avoid a GPU hang. */
-      fprintf(stderr, "Missing export in %s shader:\n", (program->stage & hw_vs) ? "vertex" : "fragment");
+      bool is_vertex_or_ngg = (program->stage.hw == HWStage::VS || program->stage.hw == HWStage::NGG);
+      aco_err(program, "Missing export in %s shader:", is_vertex_or_ngg ? "vertex or NGG" : "fragment");
       aco_print_program(program, stderr);
       abort();
    }
@@ -905,7 +918,9 @@ unsigned emit_program(Program* program,
 {
    asm_context ctx(program);
 
-   if (program->stage & (hw_vs | hw_fs | hw_ngg_gs))
+   if (program->stage.hw == HWStage::VS ||
+       program->stage.hw == HWStage::FS ||
+       program->stage.hw == HWStage::NGG)
       fix_exports(ctx, code, program);
 
    for (Block& block : program->blocks) {

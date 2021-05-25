@@ -1,21 +1,184 @@
-mesa (20.2.6-0ubuntu0.20.04.1) focal; urgency=medium
+mesa (21.0.3-0ubuntu0.2~20.04.1) focal; urgency=medium
 
-  * New upstream bugfix release. (LP: #1908699)
+  * Backport to focal. (LP: #1925320)
+  * control, rules: Use gcc10 on ppc64el to fix the build.
 
- -- Timo Aaltonen <tjaalton@debian.org>  Fri, 18 Dec 2020 10:35:45 +0200
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 25 May 2021 09:51:53 +0300
 
-mesa (20.2.1-1~ubuntu0.20.04.2) focal; urgency=medium
+mesa (21.0.3-0ubuntu0.2) hirsute; urgency=medium
 
-  * ppc64el-ftbfs-fix-type-collisions.diff: Fix build failure on ppc64el.
-    (LP: #1902244)
+  * amd-add-missing-line-from-backport.diff: Fix a regression with
+    radeonsi caused by a bad backport. (LP: #1934783)
 
- -- Timo Aaltonen <tjaalton@debian.org>  Mon, 07 Dec 2020 13:09:14 +0200
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 19 Jul 2021 22:26:12 +0300
 
-mesa (20.2.1-1~ubuntu0.20.04.1) focal; urgency=medium
+mesa (21.0.3-0ubuntu0.1) hirsute; urgency=medium
 
-  * Backport to focal. (LP: #1902244)
+  * New upstream release. (LP: #1925434)
+    - drisw-move-zink-down.diff dropped, upstream
+  * Migrate to llvm-12. (LP: #1932311)
+  * iris-avoid-abort-if-enomem.diff: Don't abort when out of memory.
+    (LP: #1918855)
 
- -- Timo Aaltonen <tjaalton@debian.org>  Thu, 19 Nov 2020 12:55:52 +0200
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 18 Jun 2021 15:42:20 +0300
+
+mesa (21.0.1-2) experimental; urgency=medium
+
+  * Move zink down the list below the sw drivers. (LP: #1920665)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 07 Apr 2021 13:18:01 +0300
+
+mesa (21.0.1-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 25 Mar 2021 21:12:09 +0200
+
+mesa (21.0.0-1) experimental; urgency=medium
+
+  * New upstream release. (LP: #1917763)
+  * control: Add directx-headers-dev to build-depends for amd64 and arm64
+    on Linux, which is what WSL2 currently supports.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 15 Mar 2021 19:22:33 +0200
+
+mesa (21.0.0~rc5-1) experimental; urgency=medium
+
+  * New upstream release candidate.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 22 Feb 2021 10:32:24 +0200
+
+mesa (21.0.0~rc4-1) experimental; urgency=medium
+
+  * New upstream release candidate.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 08 Feb 2021 13:01:20 +0200
+
+mesa (21.0.0~rc3-1) experimental; urgency=medium
+
+  * New upstream release candidate.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Sat, 30 Jan 2021 12:25:57 +0200
+
+mesa (21.0.0~rc2-1) experimental; urgency=medium
+
+  * New upstream release candidate.
+  * lavapipe-Defer-lavapipe-warning-to-CreateDevice.patch: Dropped,
+    upstream.
+  * rules: Fix osmesa confflag to use a boolean.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 22 Jan 2021 13:44:42 +0200
+
+mesa (20.3.5-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 25 Mar 2021 12:11:46 +0200
+
+mesa (20.3.4-1) unstable; urgency=medium
+
+  [ Keith Packard ]
+  * Build most drivers for riscv64 targets
+
+  [ Timo Aaltonen ]
+  * New upstream release.
+  * lavapipe-Defer-lavapipe-warning-to-CreateDevice.patch: Dropped,
+    upstream.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Sun, 31 Jan 2021 20:26:42 +0200
+
+mesa (20.3.3-1) unstable; urgency=medium
+
+  * New upstream release.
+  * path_max.diff: Updated.
+  * lavapipe-Defer-lavapipe-warning-to-CreateDevice.patch:
+    Don't print a warning which might confuse users to think they're on
+    swrast vulkan.
+  * rules: Use 'enabled' instead of 'true' for DRI3.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 15 Jan 2021 15:16:30 +0200
+
+mesa (20.3.2-1) unstable; urgency=medium
+
+  * New upstream release.
+  * rules: Enable lavapipe (vulkan swrast) where llvm and vulkan is
+    enabled.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Sun, 03 Jan 2021 20:30:50 +0200
+
+mesa (20.3.1-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 18 Dec 2020 10:23:30 +0200
+
+mesa (20.3.0-2) experimental; urgency=medium
+
+  * rules: Fix the name of the broadcom vulkan driver.
+  * control, rules: Drop llvm support from kfreebsd, as llvm isn't built
+    there.
+  * rules: Enable gallium swrast (softpipe) and OSMesa everywhere, as
+    they're not actually tied to llvm being available.
+  * rules: Move common settings for !hurd to the top.
+  * rules: Use a better method to build the arrays of drivers, thanks
+    Witold Baryluk! (Closes: #972736)
+  * rules: Clarify the status of wayland support on non-linux ports.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 10 Dec 2020 14:21:30 +0200
+
+mesa (20.3.0-1) experimental; urgency=medium
+
+  * New upstream release.
+  * rules: Enable v3dv on armhf/arm64, and zink where vulkan is
+    available. (Closes: #975679)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 07 Dec 2020 16:39:42 +0200
+
+mesa (20.3.0~rc2-1) experimental; urgency=medium
+
+  * New upstream release candidate.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 20 Nov 2020 17:00:27 +0200
+
+mesa (20.3.0~rc1-1) experimental; urgency=medium
+
+  * New upstream release candidate.
+  * control: Add libxcb-shm0-dev to build-depends.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 11 Nov 2020 18:29:42 +0200
+
+mesa (20.2.6-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 17 Dec 2020 06:42:32 +0200
+
+mesa (20.2.5-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 16 Dec 2020 23:32:56 +0200
+
+mesa (20.2.4-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 07 Dec 2020 15:11:48 +0200
+
+mesa (20.2.3-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 25 Nov 2020 13:32:39 +0200
+
+mesa (20.2.2-1) unstable; urgency=medium
+
+  * New upstream release.
+  * control: Enable libdrm-dev for Hurd. (Closes: #973673)
+  * rules: Rework EGL_PLATFORMS to match current upstream defaults.
+  * rules: Fix warnings from deprecated options. (Closes: #973675)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 10 Nov 2020 22:38:16 +0200
 
 mesa (20.2.1-1) unstable; urgency=medium
 

@@ -2,4 +2,6 @@
 fix-python-shebang.diff
 path_max.diff
 src_glx_dri_common.h.diff
-ppc64el-ftbfs-fix-type-collisions.diff
+clover-fix-build-with-llvm-12.diff
+iris-avoid-abort-if-enomem.diff
+amd-add-missing-line-from-backport.diff

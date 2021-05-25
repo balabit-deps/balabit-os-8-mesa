@@ -343,8 +343,8 @@ tu_render_pass_gmem_config(struct tu_render_pass *pass,
                            const struct tu_physical_device *phys_dev)
 {
    uint32_t block_align_shift = 3; /* log2(gmem_align/(tile_align_w*tile_align_h)) */
-   uint32_t tile_align_w = phys_dev->tile_align_w;
-   uint32_t gmem_align = (1 << block_align_shift) * tile_align_w * TILE_ALIGN_H;
+   uint32_t tile_align_w = phys_dev->info.tile_align_w;
+   uint32_t gmem_align = (1 << block_align_shift) * tile_align_w * phys_dev->info.tile_align_h;
 
    /* calculate total bytes per pixel */
    uint32_t cpp_total = 0;
@@ -386,7 +386,7 @@ tu_render_pass_gmem_config(struct tu_render_pass *pass,
     * result:  nblocks = {12, 52}, pixels = 196608
     * optimal: nblocks = {13, 51}, pixels = 208896
     */
-   uint32_t gmem_blocks = phys_dev->ccu_offset_gmem / gmem_align;
+   uint32_t gmem_blocks = phys_dev->info.a6xx.ccu_offset_gmem / gmem_align;
    uint32_t offset = 0, pixels = ~0u, i;
    for (i = 0; i < pass->attachment_count; i++) {
       struct tu_render_pass_attachment *att = &pass->attachments[i];
@@ -475,130 +475,15 @@ attachment_set_ops(struct tu_render_pass_attachment *att,
    }
 }
 
-static void
-translate_references(VkAttachmentReference2 **reference_ptr,
-                     const VkAttachmentReference *reference,
-                     uint32_t count)
+static bool
+is_depth_stencil_resolve_enabled(const VkSubpassDescriptionDepthStencilResolve *depth_stencil_resolve)
 {
-   VkAttachmentReference2 *reference2 = *reference_ptr;
-   *reference_ptr += count;
-   for (uint32_t i = 0; i < count; i++) {
-      reference2[i] = (VkAttachmentReference2) {
-         .sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2,
-         .pNext = NULL,
-         .attachment = reference[i].attachment,
-         .layout = reference[i].layout,
-         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-      };
+   if (depth_stencil_resolve &&
+       depth_stencil_resolve->pDepthStencilResolveAttachment &&
+       depth_stencil_resolve->pDepthStencilResolveAttachment->attachment != VK_ATTACHMENT_UNUSED) {
+      return true;
    }
-}
-
-VkResult
-tu_CreateRenderPass(VkDevice device,
-                    const VkRenderPassCreateInfo *pCreateInfo,
-                    const VkAllocationCallbacks *pAllocator,
-                    VkRenderPass *pRenderPass)
-{
-   /* note: these counts shouldn't be excessively high, so allocating it all
-    * on the stack should be OK..
-    * also note preserve attachments aren't translated, currently unused
-    */
-   VkAttachmentDescription2 attachments[pCreateInfo->attachmentCount];
-   VkSubpassDescription2 subpasses[pCreateInfo->subpassCount];
-   VkSubpassDependency2 dependencies[pCreateInfo->dependencyCount];
-   uint32_t reference_count = 0;
-   for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
-      reference_count += pCreateInfo->pSubpasses[i].inputAttachmentCount;
-      reference_count += pCreateInfo->pSubpasses[i].colorAttachmentCount;
-      if (pCreateInfo->pSubpasses[i].pResolveAttachments)
-         reference_count += pCreateInfo->pSubpasses[i].colorAttachmentCount;
-      if (pCreateInfo->pSubpasses[i].pDepthStencilAttachment)
-         reference_count += 1;
-   }
-   VkAttachmentReference2 reference[reference_count];
-   VkAttachmentReference2 *reference_ptr = reference;
-
-   for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
-      attachments[i] = (VkAttachmentDescription2) {
-         .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2,
-         .pNext = NULL,
-         .flags = pCreateInfo->pAttachments[i].flags,
-         .format = pCreateInfo->pAttachments[i].format,
-         .samples = pCreateInfo->pAttachments[i].samples,
-         .loadOp = pCreateInfo->pAttachments[i].loadOp,
-         .storeOp = pCreateInfo->pAttachments[i].storeOp,
-         .stencilLoadOp = pCreateInfo->pAttachments[i].stencilLoadOp,
-         .stencilStoreOp = pCreateInfo->pAttachments[i].stencilStoreOp,
-         .initialLayout = pCreateInfo->pAttachments[i].initialLayout,
-         .finalLayout = pCreateInfo->pAttachments[i].finalLayout,
-      };
-   }
-
-   for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
-      subpasses[i] = (VkSubpassDescription2) {
-         .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
-         .pNext = NULL,
-         .flags = pCreateInfo->pSubpasses[i].flags,
-         .pipelineBindPoint = pCreateInfo->pSubpasses[i].pipelineBindPoint,
-         .viewMask = 0,
-         .inputAttachmentCount = pCreateInfo->pSubpasses[i].inputAttachmentCount,
-         .colorAttachmentCount = pCreateInfo->pSubpasses[i].colorAttachmentCount,
-      };
-
-      subpasses[i].pInputAttachments = reference_ptr;
-      translate_references(&reference_ptr,
-                           pCreateInfo->pSubpasses[i].pInputAttachments,
-                           subpasses[i].inputAttachmentCount);
-      subpasses[i].pColorAttachments = reference_ptr;
-      translate_references(&reference_ptr,
-                           pCreateInfo->pSubpasses[i].pColorAttachments,
-                           subpasses[i].colorAttachmentCount);
-      subpasses[i].pResolveAttachments = NULL;
-      if (pCreateInfo->pSubpasses[i].pResolveAttachments) {
-         subpasses[i].pResolveAttachments = reference_ptr;
-         translate_references(&reference_ptr,
-                              pCreateInfo->pSubpasses[i].pResolveAttachments,
-                              subpasses[i].colorAttachmentCount);
-      }
-      subpasses[i].pDepthStencilAttachment = NULL;
-      if (pCreateInfo->pSubpasses[i].pDepthStencilAttachment) {
-         subpasses[i].pDepthStencilAttachment = reference_ptr;
-         translate_references(&reference_ptr,
-                              pCreateInfo->pSubpasses[i].pDepthStencilAttachment,
-                              1);
-      }
-   }
-
-   assert(reference_ptr == reference + reference_count);
-
-   for (uint32_t i = 0; i < pCreateInfo->dependencyCount; i++) {
-      dependencies[i] = (VkSubpassDependency2) {
-         .sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2,
-         .pNext = NULL,
-         .srcSubpass = pCreateInfo->pDependencies[i].srcSubpass,
-         .dstSubpass = pCreateInfo->pDependencies[i].dstSubpass,
-         .srcStageMask = pCreateInfo->pDependencies[i].srcStageMask,
-         .dstStageMask = pCreateInfo->pDependencies[i].dstStageMask,
-         .srcAccessMask = pCreateInfo->pDependencies[i].srcAccessMask,
-         .dstAccessMask = pCreateInfo->pDependencies[i].dstAccessMask,
-         .dependencyFlags = pCreateInfo->pDependencies[i].dependencyFlags,
-         .viewOffset = 0,
-      };
-   }
-
-   VkRenderPassCreateInfo2 create_info = {
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2,
-      .pNext = pCreateInfo->pNext,
-      .flags = pCreateInfo->flags,
-      .attachmentCount = pCreateInfo->attachmentCount,
-      .pAttachments = attachments,
-      .subpassCount = pCreateInfo->subpassCount,
-      .pSubpasses = subpasses,
-      .dependencyCount = pCreateInfo->dependencyCount,
-      .pDependencies = dependencies,
-   };
-
-   return tu_CreateRenderPass2(device, &create_info, pAllocator, pRenderPass);
+   return false;
 }
 
 VkResult
@@ -652,10 +537,13 @@ tu_CreateRenderPass2(VkDevice _device,
    struct tu_subpass_attachment *p;
    for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
       const VkSubpassDescription2 *desc = &pCreateInfo->pSubpasses[i];
+      const VkSubpassDescriptionDepthStencilResolve *ds_resolve =
+         vk_find_struct_const(desc->pNext, SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE_KHR);
 
       subpass_attachment_count +=
          desc->inputAttachmentCount + desc->colorAttachmentCount +
-         (desc->pResolveAttachments ? desc->colorAttachmentCount : 0);
+         (desc->pResolveAttachments ? desc->colorAttachmentCount : 0) +
+         (is_depth_stencil_resolve_enabled(ds_resolve) ? 1 : 0);
    }
 
    if (subpass_attachment_count) {
@@ -673,12 +561,18 @@ tu_CreateRenderPass2(VkDevice _device,
    p = pass->subpass_attachments;
    for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
       const VkSubpassDescription2 *desc = &pCreateInfo->pSubpasses[i];
+      const VkSubpassDescriptionDepthStencilResolve *ds_resolve =
+         vk_find_struct_const(desc->pNext, SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE_KHR);
       struct tu_subpass *subpass = &pass->subpasses[i];
 
       subpass->input_count = desc->inputAttachmentCount;
       subpass->color_count = desc->colorAttachmentCount;
+      subpass->resolve_count = 0;
+      subpass->resolve_depth_stencil = is_depth_stencil_resolve_enabled(ds_resolve);
       subpass->samples = 0;
       subpass->srgb_cntl = 0;
+
+      subpass->multiview_mask = desc->viewMask;
 
       if (desc->inputAttachmentCount > 0) {
          subpass->input_attachments = p;
@@ -706,19 +600,28 @@ tu_CreateRenderPass2(VkDevice _device,
 
                if (vk_format_is_srgb(pass->attachments[a].format))
                   subpass->srgb_cntl |= 1 << j;
+
+               pass->attachments[a].clear_views |= subpass->multiview_mask;
             }
          }
       }
 
-      subpass->resolve_attachments = desc->pResolveAttachments ? p : NULL;
+      subpass->resolve_attachments = (desc->pResolveAttachments || subpass->resolve_depth_stencil) ? p : NULL;
       if (desc->pResolveAttachments) {
          p += desc->colorAttachmentCount;
+         subpass->resolve_count += desc->colorAttachmentCount;
          for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
             subpass->resolve_attachments[j].attachment =
                   desc->pResolveAttachments[j].attachment;
          }
       }
 
+      if (subpass->resolve_depth_stencil) {
+         p++;
+         subpass->resolve_count++;
+         uint32_t a = ds_resolve->pDepthStencilResolveAttachment->attachment;
+         subpass->resolve_attachments[subpass->resolve_count - 1].attachment = a;
+      }
 
       uint32_t a = desc->pDepthStencilAttachment ?
          desc->pDepthStencilAttachment->attachment : VK_ATTACHMENT_UNUSED;
@@ -740,7 +643,20 @@ tu_CreateRenderPass2(VkDevice _device,
       }
    }
 
-   tu_render_pass_gmem_config(pass, device->physical_device);
+   /* From the VK_KHR_multiview spec:
+    *
+    *    Multiview is all-or-nothing for a render pass - that is, either all
+    *    subpasses must have a non-zero view mask (though some subpasses may
+    *    have only one view) or all must be zero.
+    *
+    * This means we only have to check one of the view masks.
+    */
+   if (pCreateInfo->pSubpasses[0].viewMask) {
+      /* It seems multiview must use sysmem rendering. */
+      pass->gmem_pixels = 0;
+   } else {
+      tu_render_pass_gmem_config(pass, device->physical_device);
+   }
 
    for (unsigned i = 0; i < pCreateInfo->dependencyCount; ++i) {
       tu_render_pass_add_subpass_dep(pass, &pCreateInfo->pDependencies[i]);
@@ -773,6 +689,17 @@ tu_GetRenderAreaGranularity(VkDevice _device,
                             VkRenderPass renderPass,
                             VkExtent2D *pGranularity)
 {
-   pGranularity->width = GMEM_ALIGN_W;
-   pGranularity->height = GMEM_ALIGN_H;
+   TU_FROM_HANDLE(tu_device, device, _device);
+   pGranularity->width = device->physical_device->info.gmem_align_w;
+   pGranularity->height = device->physical_device->info.gmem_align_h;
+}
+
+uint32_t
+tu_subpass_get_attachment_to_resolve(const struct tu_subpass *subpass, uint32_t index)
+{
+   if (subpass->resolve_depth_stencil &&
+       index == (subpass->resolve_count - 1))
+      return subpass->depth_stencil_attachment.attachment;
+
+   return subpass->color_attachments[index].attachment;
 }

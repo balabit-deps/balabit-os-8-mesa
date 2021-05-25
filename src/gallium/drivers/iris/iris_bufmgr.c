@@ -206,7 +206,7 @@ find_and_ref_external_bo(struct hash_table *ht, unsigned int key)
        * we hadn't yet closed it...and then reimported the same BO.  If it
        * is, then remove it since it's now been resurrected.
        */
-      if (bo->head.prev || bo->head.next)
+      if (list_is_linked(&bo->head))
          list_del(&bo->head);
 
       iris_bo_reference(bo);
@@ -798,14 +798,17 @@ bo_free(struct iris_bo *bo)
    if (bo->map_cpu && !bo->userptr) {
       VG_NOACCESS(bo->map_cpu, bo->size);
       os_munmap(bo->map_cpu, bo->size);
+      bo->map_cpu = NULL;
    }
    if (bo->map_wc) {
       VG_NOACCESS(bo->map_wc, bo->size);
       os_munmap(bo->map_wc, bo->size);
+      bo->map_wc = NULL;
    }
    if (bo->map_gtt) {
       VG_NOACCESS(bo->map_gtt, bo->size);
       os_munmap(bo->map_gtt, bo->size);
+      bo->map_gtt = NULL;
    }
 
    if (bo->idle) {
@@ -1381,7 +1384,7 @@ bo_set_tiling_internal(struct iris_bo *bo, uint32_t tiling_mode,
 
 struct iris_bo *
 iris_bo_import_dmabuf(struct iris_bufmgr *bufmgr, int prime_fd,
-                      int tiling)
+                      uint64_t modifier)
 {
    uint32_t handle;
    struct iris_bo *bo;
@@ -1441,9 +1444,10 @@ iris_bo_import_dmabuf(struct iris_bufmgr *bufmgr, int prime_fd,
    bo->gem_handle = handle;
    _mesa_hash_table_insert(bufmgr->handle_table, &bo->gem_handle, bo);
 
-   if (tiling != -1) {
-      /* Modifiers path */
-      bo->tiling_mode = tiling;
+   const struct isl_drm_modifier_info *mod_info =
+      isl_drm_modifier_get_info(modifier);
+   if (mod_info) {
+      bo->tiling_mode = isl_tiling_to_i915_tiling(mod_info->tiling);
    } else if (bufmgr->has_tiling_uapi) {
       struct drm_i915_gem_get_tiling get_tiling = { .handle = bo->gem_handle };
       if (gen_ioctl(bufmgr->fd, DRM_IOCTL_I915_GEM_GET_TILING, &get_tiling))

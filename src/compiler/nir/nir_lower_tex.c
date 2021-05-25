@@ -40,29 +40,33 @@
 #include "nir_builtin_builder.h"
 #include "nir_format_convert.h"
 
-static float bt601_csc_coeffs[9] = {
-   1.16438356f,  1.16438356f, 1.16438356f,
-   0.0f,        -0.39176229f, 2.01723214f,
-   1.59602678f, -0.81296764f, 0.0f,
-};
-static float bt709_csc_coeffs[9] = {
-   1.16438356f,  1.16438356f, 1.16438356f,
-   0.0f       , -0.21324861f, 2.11240179f,
-   1.79274107f, -0.53290933f, 0.0f,
-};
-static float bt2020_csc_coeffs[9] = {
-   1.16438356f,  1.16438356f, 1.16438356f,
-   0.0f       , -0.18732610f, 2.14177232f,
-   1.67867411f, -0.65042432f, 0.0f,
-};
+typedef struct nir_const_value_3_4 {
+   nir_const_value v[3][4];
+} nir_const_value_3_4;
 
-static float bt601_csc_offsets[3] = {
+static const nir_const_value_3_4 bt601_csc_coeffs = { {
+   { { .f32 = 1.16438356f }, { .f32 =  1.16438356f }, { .f32 = 1.16438356f } },
+   { { .f32 = 0.0f        }, { .f32 = -0.39176229f }, { .f32 = 2.01723214f } },
+   { { .f32 = 1.59602678f }, { .f32 = -0.81296764f }, { .f32 = 0.0f        } },
+} };
+static const nir_const_value_3_4 bt709_csc_coeffs = { {
+   { { .f32 = 1.16438356f }, { .f32 =  1.16438356f }, { .f32 = 1.16438356f } },
+   { { .f32 = 0.0f        }, { .f32 = -0.21324861f }, { .f32 = 2.11240179f } },
+   { { .f32 = 1.79274107f }, { .f32 = -0.53290933f }, { .f32 = 0.0f        } },
+} };
+static const nir_const_value_3_4 bt2020_csc_coeffs = { {
+   { { .f32 = 1.16438356f }, { .f32 =  1.16438356f }, { .f32 = 1.16438356f } },
+   { { .f32 = 0.0f        }, { .f32 = -0.18732610f }, { .f32 = 2.14177232f } },
+   { { .f32 = 1.67867411f }, { .f32 = -0.65042432f }, { .f32 = 0.0f        } },
+} };
+
+static const float bt601_csc_offsets[3] = {
    -0.874202218f, 0.531667823f, -1.085630789f
 };
-static float bt709_csc_offsets[3] = {
+static const float bt709_csc_offsets[3] = {
    -0.972945075f, 0.301482665f, -1.133402218f
 };
-static float bt2020_csc_offsets[3] = {
+static const float bt2020_csc_offsets[3] = {
    -0.915687932f, 0.347458499f, -1.148145075f
 };
 
@@ -283,28 +287,24 @@ static void
 convert_yuv_to_rgb(nir_builder *b, nir_tex_instr *tex,
                    nir_ssa_def *y, nir_ssa_def *u, nir_ssa_def *v,
                    nir_ssa_def *a,
-                   const nir_lower_tex_options *options)
+                   const nir_lower_tex_options *options,
+                   unsigned texture_index)
 {
 
-   float *offset_vals;
-   float *m_vals;
+   const float *offset_vals;
+   const nir_const_value_3_4 *m;
    assert((options->bt709_external & options->bt2020_external) == 0);
-   if (options->bt709_external & (1 << tex->texture_index)) {
-      m_vals = bt709_csc_coeffs;
+   if (options->bt709_external & (1u << texture_index)) {
+      m = &bt709_csc_coeffs;
       offset_vals = bt709_csc_offsets;
-   } else if (options->bt2020_external & (1 << tex->texture_index)) {
-      m_vals = bt2020_csc_coeffs;
+   } else if (options->bt2020_external & (1u << texture_index)) {
+      m = &bt2020_csc_coeffs;
       offset_vals = bt2020_csc_offsets;
    } else {
-      m_vals = bt601_csc_coeffs;
+      m = &bt601_csc_coeffs;
       offset_vals = bt601_csc_offsets;
    }
 
-   nir_const_value m[3][4] = {
-      { { .f32 = m_vals[0] }, { .f32 =  m_vals[1] }, { .f32 = m_vals[2] }, { .f32 = 0.0f } },
-      { { .f32 = m_vals[3] }, { .f32 =  m_vals[4] }, { .f32 = m_vals[5] }, { .f32 = 0.0f } },
-      { { .f32 = m_vals[6] }, { .f32 =  m_vals[7] }, { .f32 = m_vals[8] }, { .f32 = 0.0f } },
-   };
    unsigned bit_size = nir_dest_bit_size(tex->dest);
 
    nir_ssa_def *offset =
@@ -316,9 +316,9 @@ convert_yuv_to_rgb(nir_builder *b, nir_tex_instr *tex,
 
    offset = nir_f2fN(b, offset, bit_size);
 
-   nir_ssa_def *m0 = nir_f2fN(b, nir_build_imm(b, 4, 32, m[0]), bit_size);
-   nir_ssa_def *m1 = nir_f2fN(b, nir_build_imm(b, 4, 32, m[1]), bit_size);
-   nir_ssa_def *m2 = nir_f2fN(b, nir_build_imm(b, 4, 32, m[2]), bit_size);
+   nir_ssa_def *m0 = nir_f2fN(b, nir_build_imm(b, 4, 32, m->v[0]), bit_size);
+   nir_ssa_def *m1 = nir_f2fN(b, nir_build_imm(b, 4, 32, m->v[1]), bit_size);
+   nir_ssa_def *m2 = nir_f2fN(b, nir_build_imm(b, 4, 32, m->v[2]), bit_size);
 
    nir_ssa_def *result =
       nir_ffma(b, y, m0, nir_ffma(b, u, m1, nir_ffma(b, v, m2, offset)));
@@ -328,7 +328,8 @@ convert_yuv_to_rgb(nir_builder *b, nir_tex_instr *tex,
 
 static void
 lower_y_uv_external(nir_builder *b, nir_tex_instr *tex,
-                    const nir_lower_tex_options *options)
+                    const nir_lower_tex_options *options,
+                    unsigned texture_index)
 {
    b->cursor = nir_after_instr(&tex->instr);
 
@@ -340,12 +341,14 @@ lower_y_uv_external(nir_builder *b, nir_tex_instr *tex,
                       nir_channel(b, uv, 0),
                       nir_channel(b, uv, 1),
                       nir_imm_float(b, 1.0f),
-                      options);
+                      options,
+                      texture_index);
 }
 
 static void
 lower_y_u_v_external(nir_builder *b, nir_tex_instr *tex,
-                     const nir_lower_tex_options *options)
+                     const nir_lower_tex_options *options,
+                     unsigned texture_index)
 {
    b->cursor = nir_after_instr(&tex->instr);
 
@@ -358,12 +361,14 @@ lower_y_u_v_external(nir_builder *b, nir_tex_instr *tex,
                       nir_channel(b, u, 0),
                       nir_channel(b, v, 0),
                       nir_imm_float(b, 1.0f),
-                      options);
+                      options,
+                      texture_index);
 }
 
 static void
 lower_yx_xuxv_external(nir_builder *b, nir_tex_instr *tex,
-                       const nir_lower_tex_options *options)
+                       const nir_lower_tex_options *options,
+                       unsigned texture_index)
 {
    b->cursor = nir_after_instr(&tex->instr);
 
@@ -375,12 +380,14 @@ lower_yx_xuxv_external(nir_builder *b, nir_tex_instr *tex,
                       nir_channel(b, xuxv, 1),
                       nir_channel(b, xuxv, 3),
                       nir_imm_float(b, 1.0f),
-                      options);
+                      options,
+                      texture_index);
 }
 
 static void
 lower_xy_uxvx_external(nir_builder *b, nir_tex_instr *tex,
-                       const nir_lower_tex_options *options)
+                       const nir_lower_tex_options *options,
+                       unsigned texture_index)
 {
   b->cursor = nir_after_instr(&tex->instr);
 
@@ -392,12 +399,14 @@ lower_xy_uxvx_external(nir_builder *b, nir_tex_instr *tex,
                      nir_channel(b, uxvx, 0),
                      nir_channel(b, uxvx, 2),
                      nir_imm_float(b, 1.0f),
-                     options);
+                     options,
+                     texture_index);
 }
 
 static void
 lower_ayuv_external(nir_builder *b, nir_tex_instr *tex,
-                    const nir_lower_tex_options *options)
+                    const nir_lower_tex_options *options,
+                    unsigned texture_index)
 {
   b->cursor = nir_after_instr(&tex->instr);
 
@@ -408,12 +417,14 @@ lower_ayuv_external(nir_builder *b, nir_tex_instr *tex,
                      nir_channel(b, ayuv, 1),
                      nir_channel(b, ayuv, 0),
                      nir_channel(b, ayuv, 3),
-                     options);
+                     options,
+                     texture_index);
 }
 
 static void
 lower_xyuv_external(nir_builder *b, nir_tex_instr *tex,
-                    const nir_lower_tex_options *options)
+                    const nir_lower_tex_options *options,
+                    unsigned texture_index)
 {
   b->cursor = nir_after_instr(&tex->instr);
 
@@ -424,7 +435,26 @@ lower_xyuv_external(nir_builder *b, nir_tex_instr *tex,
                      nir_channel(b, xyuv, 1),
                      nir_channel(b, xyuv, 0),
                      nir_imm_float(b, 1.0f),
-                     options);
+                     options,
+                     texture_index);
+}
+
+static void
+lower_yuv_external(nir_builder *b, nir_tex_instr *tex,
+                   const nir_lower_tex_options *options,
+                   unsigned texture_index)
+{
+  b->cursor = nir_after_instr(&tex->instr);
+
+  nir_ssa_def *yuv = sample_plane(b, tex, 0, options);
+
+  convert_yuv_to_rgb(b, tex,
+                     nir_channel(b, yuv, 0),
+                     nir_channel(b, yuv, 1),
+                     nir_channel(b, yuv, 2),
+                     nir_imm_float(b, 1.0f),
+                     options,
+                     texture_index);
 }
 
 /*
@@ -909,7 +939,7 @@ lower_tg4_offsets(nir_builder *b, nir_tex_instr *tex)
 
    b->cursor = nir_after_instr(&tex->instr);
 
-   nir_ssa_def *dest[4];
+   nir_ssa_def *dest[5] = {NULL};
    for (unsigned i = 0; i < 4; ++i) {
       nir_tex_instr *tex_copy = nir_tex_instr_create(b->shader, tex->num_srcs + 1);
       tex_copy->op = tex->op;
@@ -918,6 +948,7 @@ lower_tg4_offsets(nir_builder *b, nir_tex_instr *tex)
       tex_copy->is_array = tex->is_array;
       tex_copy->is_shadow = tex->is_shadow;
       tex_copy->is_new_style_shadow = tex->is_new_style_shadow;
+      tex_copy->is_sparse = tex->is_sparse;
       tex_copy->component = tex->component;
       tex_copy->dest_type = tex->dest_type;
 
@@ -938,9 +969,13 @@ lower_tg4_offsets(nir_builder *b, nir_tex_instr *tex)
       nir_builder_instr_insert(b, &tex_copy->instr);
 
       dest[i] = nir_channel(b, &tex_copy->dest.ssa, 3);
+      if (tex->is_sparse) {
+         nir_ssa_def *code = nir_channel(b, &tex_copy->dest.ssa, 4);
+         dest[4] = dest[4] ? nir_sparse_residency_code_and(b, dest[4], code) : code;
+      }
    }
 
-   nir_ssa_def *res = nir_vec4(b, dest[0], dest[1], dest[2], dest[3]);
+   nir_ssa_def *res = nir_vec(b, dest, tex->dest.ssa.num_components);
    nir_ssa_def_rewrite_uses(&tex->dest.ssa, nir_src_for_ssa(res));
    nir_instr_remove(&tex->instr);
 
@@ -1032,33 +1067,48 @@ nir_lower_tex_block(nir_block *block, nir_builder *b,
          progress = true;
       }
 
-      if ((1 << tex->texture_index) & options->lower_y_uv_external) {
-         lower_y_uv_external(b, tex, options);
+      unsigned texture_index = tex->texture_index;
+      uint32_t texture_mask = 1u << texture_index;
+      int tex_index = nir_tex_instr_src_index(tex, nir_tex_src_texture_deref);
+      if (tex_index >= 0) {
+         nir_deref_instr *deref = nir_src_as_deref(tex->src[tex_index].src);
+         nir_variable *var = nir_deref_instr_get_variable(deref);
+         texture_index = var ? var->data.binding : 0;
+         texture_mask = var ? (1u << texture_index) : 0u;
+      }
+
+      if (texture_mask & options->lower_y_uv_external) {
+         lower_y_uv_external(b, tex, options, texture_index);
          progress = true;
       }
 
-      if ((1 << tex->texture_index) & options->lower_y_u_v_external) {
-         lower_y_u_v_external(b, tex, options);
+      if (texture_mask & options->lower_y_u_v_external) {
+         lower_y_u_v_external(b, tex, options, texture_index);
          progress = true;
       }
 
-      if ((1 << tex->texture_index) & options->lower_yx_xuxv_external) {
-         lower_yx_xuxv_external(b, tex, options);
+      if (texture_mask & options->lower_yx_xuxv_external) {
+         lower_yx_xuxv_external(b, tex, options, texture_index);
          progress = true;
       }
 
-      if ((1 << tex->texture_index) & options->lower_xy_uxvx_external) {
-         lower_xy_uxvx_external(b, tex, options);
+      if (texture_mask & options->lower_xy_uxvx_external) {
+         lower_xy_uxvx_external(b, tex, options, texture_index);
          progress = true;
       }
 
-      if ((1 << tex->texture_index) & options->lower_ayuv_external) {
-         lower_ayuv_external(b, tex, options);
+      if (texture_mask & options->lower_ayuv_external) {
+         lower_ayuv_external(b, tex, options, texture_index);
          progress = true;
       }
 
-      if ((1 << tex->texture_index) & options->lower_xyuv_external) {
-         lower_xyuv_external(b, tex, options);
+      if (texture_mask & options->lower_xyuv_external) {
+         lower_xyuv_external(b, tex, options, texture_index);
+         progress = true;
+      }
+
+      if (texture_mask & options->lower_yuv_external) {
+         lower_yuv_external(b, tex, options, texture_index);
          progress = true;
       }
 
@@ -1072,7 +1122,7 @@ nir_lower_tex_block(nir_block *block, nir_builder *b,
          progress = true;
       }
 
-      if (((1 << tex->texture_index) & options->swizzle_result) &&
+      if ((texture_mask & options->swizzle_result) &&
           !nir_tex_instr_is_query(tex) &&
           !(tex->is_shadow && tex->is_new_style_shadow)) {
          swizzle_result(b, tex, options->swizzles[tex->texture_index]);
@@ -1080,7 +1130,7 @@ nir_lower_tex_block(nir_block *block, nir_builder *b,
       }
 
       /* should be after swizzle so we know which channels are rgb: */
-      if (((1 << tex->texture_index) & options->lower_srgb) &&
+      if ((texture_mask & options->lower_srgb) &&
           !nir_tex_instr_is_query(tex) && !tex->is_shadow) {
          linearize_srgb_result(b, tex);
          progress = true;

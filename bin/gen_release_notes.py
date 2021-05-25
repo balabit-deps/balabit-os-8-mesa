@@ -25,6 +25,7 @@ import asyncio
 import datetime
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import textwrap
@@ -74,7 +75,7 @@ TEMPLATE = Template(textwrap.dedent("""\
     ------------
 
     %for f in features:
-    - ${f}
+    - ${rst_escape(f)}
     %endfor
 
 
@@ -82,7 +83,7 @@ TEMPLATE = Template(textwrap.dedent("""\
     ---------
 
     %for b in bugs:
-    - ${b}
+    - ${rst_escape(b)}
     %endfor
 
 
@@ -91,13 +92,25 @@ TEMPLATE = Template(textwrap.dedent("""\
     %for c, author_line in changes:
       %if author_line:
 
-    ${c}
+    ${rst_escape(c)}
 
       %else:
-    - ${c}
+    - ${rst_escape(c)}
       %endif
     %endfor
     """))
+
+
+def rst_escape(unsafe_str: str) -> str:
+    "Escape rST special chars when they follow or preceed a whitespace"
+    special = re.escape(r'`<>*_#[]|')
+    unsafe_str = re.sub(r'(^|\s)([' + special + r'])',
+                        r'\1\\\2',
+                        unsafe_str)
+    unsafe_str = re.sub(r'([' + special + r'])(\s|$)',
+                        r'\\\1\2',
+                        unsafe_str)
+    return unsafe_str
 
 
 async def gather_commits(version: str) -> str:
@@ -113,25 +126,24 @@ async def gather_bugs(version: str) -> typing.List[str]:
     commits = await gather_commits(version)
 
     issues: typing.List[str] = []
-    if commits:
-        for commit in commits.split('\n'):
-            sha, message = commit.split(maxsplit=1)
-            p = await asyncio.create_subprocess_exec(
-                'git', 'log', '--max-count', '1', r'--format=%b', sha,
-                stdout=asyncio.subprocess.PIPE)
-            _out, _ = await p.communicate()
-            out = _out.decode().split('\n')
-            for line in reversed(out):
-                if line.startswith('Closes:'):
-                    bug = line.lstrip('Closes:').strip()
-                    break
-            else:
-                raise Exception('No closes found?')
-            if bug.startswith('h'):
-                # This means we have a bug in the form "Closes: https://..."
-                issues.append(os.path.basename(urllib.parse.urlparse(bug).path))
-            else:
-                issues.append(bug.lstrip('#'))
+    for commit in commits.split('\n'):
+        sha, message = commit.split(maxsplit=1)
+        p = await asyncio.create_subprocess_exec(
+            'git', 'log', '--max-count', '1', r'--format=%b', sha,
+            stdout=asyncio.subprocess.PIPE)
+        _out, _ = await p.communicate()
+        out = _out.decode().split('\n')
+        for line in reversed(out):
+            if line.startswith('Closes:'):
+                bug = line.lstrip('Closes:').strip()
+                break
+        else:
+            raise Exception('No closes found?')
+        if bug.startswith('h'):
+            # This means we have a bug in the form "Closes: https://..."
+            issues.append(os.path.basename(urllib.parse.urlparse(bug).path))
+        else:
+            issues.append(bug.lstrip('#'))
 
     loop = asyncio.get_event_loop()
     async with aiohttp.ClientSession(loop=loop) as session:
@@ -250,6 +262,7 @@ async def main() -> None:
                 header_underline=header_underline,
                 previous_version=previous_version,
                 vk_version=CURRENT_VK_VERSION,
+                rst_escape=rst_escape,
             ))
         except:
             print(exceptions.text_error_template().render())

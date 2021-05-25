@@ -342,16 +342,19 @@ swr_get_shader_param(struct pipe_screen *screen,
                      enum pipe_shader_type shader,
                      enum pipe_shader_cap param)
 {
-   if (shader == PIPE_SHADER_VERTEX ||
-       shader == PIPE_SHADER_FRAGMENT ||
-       shader == PIPE_SHADER_GEOMETRY
-       || shader == PIPE_SHADER_TESS_CTRL ||
-       shader == PIPE_SHADER_TESS_EVAL
-   )
-      return gallivm_get_shader_param(param);
+   if (shader != PIPE_SHADER_VERTEX &&
+       shader != PIPE_SHADER_FRAGMENT &&
+       shader != PIPE_SHADER_GEOMETRY &&
+       shader != PIPE_SHADER_TESS_CTRL &&
+       shader != PIPE_SHADER_TESS_EVAL)
+      return 0;
 
-   // Todo: compute
-   return 0;
+   if (param == PIPE_SHADER_CAP_MAX_SHADER_BUFFERS ||
+       param == PIPE_SHADER_CAP_MAX_SHADER_IMAGES) {
+      return 0;
+   }
+
+   return gallivm_get_shader_param(param);
 }
 
 
@@ -987,6 +990,7 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
 
 static void
 swr_flush_frontbuffer(struct pipe_screen *p_screen,
+                      struct pipe_context *pipe,
                       struct pipe_resource *resource,
                       unsigned level,
                       unsigned layer,
@@ -996,7 +1000,6 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
    struct swr_screen *screen = swr_screen(p_screen);
    struct sw_winsys *winsys = screen->winsys;
    struct swr_resource *spr = swr_resource(resource);
-   struct pipe_context *pipe = screen->pipe;
    struct swr_context *ctx = swr_context(pipe);
 
    if (pipe) {
@@ -1013,7 +1016,7 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
       SWR_SURFACE_STATE *resolve = &swr_resource(resolve_target)->swr;
 
       void *map = winsys->displaytarget_map(winsys, spr->display_target,
-                                            PIPE_TRANSFER_WRITE);
+                                            PIPE_MAP_WRITE);
       memcpy(map, (void*)(resolve->xpBaseAddress), resolve->pitch * resolve->height);
       winsys->displaytarget_unmap(winsys, spr->display_target);
    }

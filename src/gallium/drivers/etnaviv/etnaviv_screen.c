@@ -53,7 +53,7 @@
 #define ETNA_DRM_VERSION_FENCE_FD      ETNA_DRM_VERSION(1, 1)
 #define ETNA_DRM_VERSION_PERFMON       ETNA_DRM_VERSION(1, 2)
 
-static const struct debug_named_value debug_options[] = {
+static const struct debug_named_value etna_debug_options[] = {
    {"dbg_msgs",       ETNA_DBG_MSGS, "Print debug messages"},
    {"frame_msgs",     ETNA_DBG_FRAME_MSGS, "Print frame messages"},
    {"resource_msgs",  ETNA_DBG_RESOURCE_MSGS, "Print resource messages"},
@@ -74,10 +74,11 @@ static const struct debug_named_value debug_options[] = {
    {"no_singlebuffer",ETNA_DBG_NO_SINGLEBUF, "Disable single buffer feature"},
    {"nir",            ETNA_DBG_NIR, "use new NIR compiler"},
    {"deqp",           ETNA_DBG_DEQP, "Hacks to run dEQP GLES3 tests"}, /* needs MESA_GLES_VERSION_OVERRIDE=3.0 */
+   {"nocache",        ETNA_DBG_NOCACHE,    "Disable shader cache"},
    DEBUG_NAMED_VALUE_END
 };
 
-DEBUG_GET_ONCE_FLAGS_OPTION(etna_mesa_debug, "ETNA_MESA_DEBUG", debug_options, 0)
+DEBUG_GET_ONCE_FLAGS_OPTION(etna_mesa_debug, "ETNA_MESA_DEBUG", etna_debug_options, 0)
 int etna_mesa_debug = 0;
 
 static void
@@ -379,7 +380,8 @@ etna_screen_get_shader_param(struct pipe_screen *pscreen,
    case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
       return false;
    case PIPE_SHADER_CAP_SUPPORTED_IRS:
-      return 0;
+      return (1 << PIPE_SHADER_IR_TGSI) |
+             (DBG_ENABLED(ETNA_DBG_NIR) ? 1 << PIPE_SHADER_IR_NIR : 0);
    case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
       return 32;
    case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
@@ -577,13 +579,24 @@ const uint64_t supported_modifiers[] = {
    DRM_FORMAT_MOD_VIVANTE_SPLIT_SUPER_TILED,
 };
 
+static bool modifier_num_supported(struct pipe_screen *pscreen, int num)
+{
+   struct etna_screen *screen = etna_screen(pscreen);
+
+   /* don't advertise split tiled formats on single pipe/buffer GPUs */
+   if ((screen->specs.pixel_pipes == 1 || screen->specs.single_buffer) &&
+       num >= 3)
+      return false;
+
+   return true;
+}
+
 static void
 etna_screen_query_dmabuf_modifiers(struct pipe_screen *pscreen,
                                    enum pipe_format format, int max,
                                    uint64_t *modifiers,
                                    unsigned int *external_only, int *count)
 {
-   struct etna_screen *screen = etna_screen(pscreen);
    int i, num_modifiers = 0;
 
    if (max > ARRAY_SIZE(supported_modifiers))
@@ -595,9 +608,7 @@ etna_screen_query_dmabuf_modifiers(struct pipe_screen *pscreen,
    }
 
    for (i = 0; num_modifiers < max; i++) {
-      /* don't advertise split tiled formats on single pipe/buffer GPUs */
-      if ((screen->specs.pixel_pipes == 1 || screen->specs.single_buffer) &&
-          i >= 3)
+      if (!modifier_num_supported(pscreen, i))
          break;
 
       if (modifiers)
@@ -608,6 +619,29 @@ etna_screen_query_dmabuf_modifiers(struct pipe_screen *pscreen,
    }
 
    *count = num_modifiers;
+}
+
+static bool
+etna_screen_is_dmabuf_modifier_supported(struct pipe_screen *pscreen,
+                                         uint64_t modifier,
+                                         enum pipe_format format,
+                                         bool *external_only)
+{
+   int i;
+
+   for (i = 0; i < ARRAY_SIZE(supported_modifiers); i++) {
+      if (!modifier_num_supported(pscreen, i))
+         break;
+
+      if (modifier == supported_modifiers[i]) {
+         if (external_only)
+            *external_only = util_format_is_yuv(format) ? 1 : 0;
+
+         return true;
+      }
+   }
+
+   return false;
 }
 
 static void
@@ -852,7 +886,7 @@ fail:
 
 struct etna_bo *
 etna_screen_bo_from_handle(struct pipe_screen *pscreen,
-                           struct winsys_handle *whandle, unsigned *out_stride)
+                           struct winsys_handle *whandle)
 {
    struct etna_screen *screen = etna_screen(pscreen);
    struct etna_bo *bo;
@@ -871,8 +905,6 @@ etna_screen_bo_from_handle(struct pipe_screen *pscreen,
       return NULL;
    }
 
-   *out_stride = whandle->stride;
-
    return bo;
 }
 
@@ -881,6 +913,15 @@ etna_get_compiler_options(struct pipe_screen *pscreen,
                           enum pipe_shader_ir ir, unsigned shader)
 {
    return &etna_screen(pscreen)->options;
+}
+
+static struct disk_cache *
+etna_get_disk_shader_cache(struct pipe_screen *pscreen)
+{
+   struct etna_screen *screen = etna_screen(pscreen);
+   struct etna_compiler *compiler = screen->compiler;
+
+   return compiler->disk_cache;
 }
 
 struct pipe_screen *
@@ -992,9 +1033,10 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
 
    screen->options = (nir_shader_compiler_options) {
       .lower_fpow = true,
-      .lower_sub = true,
       .lower_ftrunc = true,
-      .fuse_ffma = true,
+      .fuse_ffma16 = true,
+      .fuse_ffma32 = true,
+      .fuse_ffma64 = true,
       .lower_bitops = true,
       .lower_all_io_to_temps = true,
       .vertex_id_zero_based = true,
@@ -1027,6 +1069,7 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
    pscreen->get_paramf = etna_screen_get_paramf;
    pscreen->get_shader_param = etna_screen_get_shader_param;
    pscreen->get_compiler_options = etna_get_compiler_options;
+   pscreen->get_disk_shader_cache = etna_get_disk_shader_cache;
 
    pscreen->get_name = etna_screen_get_name;
    pscreen->get_vendor = etna_screen_get_vendor;
@@ -1036,8 +1079,9 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
    pscreen->context_create = etna_context_create;
    pscreen->is_format_supported = etna_screen_is_format_supported;
    pscreen->query_dmabuf_modifiers = etna_screen_query_dmabuf_modifiers;
+   pscreen->is_dmabuf_modifier_supported = etna_screen_is_dmabuf_modifier_supported;
 
-   screen->compiler = etna_compiler_create();
+   screen->compiler = etna_compiler_create(etna_screen_get_name(pscreen));
    if (!screen->compiler)
       goto fail;
 

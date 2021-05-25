@@ -92,7 +92,7 @@ svga_define_stream_output(struct svga_context *svga,
                                           bufSize);
       if (!declBuf)
          return PIPE_ERROR;
-      map = sws->buffer_map(sws, declBuf, PIPE_TRANSFER_WRITE);
+      map = sws->buffer_map(sws, declBuf, PIPE_MAP_WRITE);
       if (!map) {
          sws->buffer_destroy(sws, declBuf);
          return PIPE_ERROR;
@@ -490,7 +490,7 @@ svga_set_stream_output_targets(struct pipe_context *pipe,
 
    if (svga_have_sm5(svga) && svga->current_so && begin_so_queries) {
 
-      /* If there are aleady active queries and we need to start a new streamout,
+      /* If there are already active queries and we need to start a new streamout,
        * we need to stop the current active queries first.
        */
       if (svga->in_streamout) {

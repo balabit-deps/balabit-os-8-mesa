@@ -411,7 +411,6 @@ fail:
 static boolean
 generate_aapoint_fs_nir(struct aapoint_stage *aapoint)
 {
-#ifdef LLVM_AVAILABLE
    struct pipe_context *pipe = aapoint->stage.draw->pipe;
    const struct pipe_shader_state *orig_fs = &aapoint->fs->state;
    struct pipe_shader_state aapoint_fs;
@@ -429,7 +428,6 @@ generate_aapoint_fs_nir(struct aapoint_stage *aapoint)
    return TRUE;
 
 fail:
-#endif
    return FALSE;
 }
 
@@ -597,7 +595,7 @@ aapoint_first_point(struct draw_stage *stage, struct prim_header *header)
    draw->suspend_flushing = TRUE;
 
    /* Disable triangle culling, stippling, unfilled mode etc. */
-   r = draw_get_rasterizer_no_cull(draw, rast->scissor, rast->flatshade);
+   r = draw_get_rasterizer_no_cull(draw, rast);
    pipe->bind_rasterizer_state(pipe, r);
 
    draw->suspend_flushing = FALSE;
@@ -748,10 +746,8 @@ aapoint_create_fs_state(struct pipe_context *pipe,
    aafs->state.type = fs->type;
    if (fs->type == PIPE_SHADER_IR_TGSI)
       aafs->state.tokens = tgsi_dup_tokens(fs->tokens);
-#ifdef LLVM_AVAILABLE
    else
       aafs->state.ir.nir = nir_shader_clone(NULL, fs->ir.nir);
-#endif
    /* pass-through */
    aafs->driver_fs = aapoint->driver_create_fs_state(pipe, fs);
 

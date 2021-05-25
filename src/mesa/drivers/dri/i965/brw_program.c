@@ -119,7 +119,7 @@ brw_create_nir(struct brw_context *brw,
 
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
 
-   if (!ctx->SoftFP64 && nir->info.uses_64bit &&
+   if (!ctx->SoftFP64 && ((nir->info.bit_sizes_int | nir->info.bit_sizes_float) & 64) &&
        (options->lower_doubles_options & nir_lower_fp64_full_software)) {
       ctx->SoftFP64 = glsl_float64_funcs_to_nir(ctx, options);
    }
@@ -148,7 +148,7 @@ brw_create_nir(struct brw_context *brw,
 
    if (stage == MESA_SHADER_FRAGMENT) {
       static const struct nir_lower_wpos_ytransform_options wpos_options = {
-         .state_tokens = {STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM, 0, 0, 0},
+         .state_tokens = {STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM, 0, 0},
          .fs_coord_pixel_center_integer = 1,
          .fs_coord_origin_upper_left = 1,
       };

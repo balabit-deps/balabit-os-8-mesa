@@ -146,7 +146,7 @@ get_ahw_buffer_format_properties(
 
    p->formatFeatures =
       anv_get_image_format_features(&device->info, p->format, anv_format,
-                                    tiling);
+                                    tiling, NULL);
 
    /* "Images can be created with an external format even if the Android hardware
     *  buffer has a format which has an equivalent Vulkan format to enable
@@ -624,7 +624,7 @@ setup_gralloc0_usage(struct anv_device *device, VkFormat format,
                           GRALLOC_USAGE_EXTERNAL_DISP;
          break;
       default:
-         intel_logw("%s: unsupported format=%d", __func__, format);
+         mesa_logw("%s: unsupported format=%d", __func__, format);
    }
 
    if (*grallocUsage == 0)
@@ -647,7 +647,7 @@ VkResult anv_GetSwapchainGrallocUsage2ANDROID(
 
    *grallocConsumerUsage = 0;
    *grallocProducerUsage = 0;
-   intel_logd("%s: format=%d, usage=0x%x", __func__, format, imageUsage);
+   mesa_logd("%s: format=%d, usage=0x%x", __func__, format, imageUsage);
 
    result = format_supported_with_usage(device_h, format, imageUsage);
    if (result != VK_SUCCESS)
@@ -690,7 +690,7 @@ VkResult anv_GetSwapchainGrallocUsageANDROID(
    VkResult result;
 
    *grallocUsage = 0;
-   intel_logd("%s: format=%d, usage=0x%x", __func__, format, imageUsage);
+   mesa_logd("%s: format=%d, usage=0x%x", __func__, format, imageUsage);
 
    result = format_supported_with_usage(device_h, format, imageUsage);
    if (result != VK_SUCCESS)

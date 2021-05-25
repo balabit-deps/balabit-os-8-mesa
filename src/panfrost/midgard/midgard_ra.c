@@ -116,7 +116,7 @@ set_class(unsigned *classes, unsigned node, unsigned class)
 /* Special register classes impose special constraints on who can read their
  * values, so check that */
 
-static bool
+static bool ASSERTED
 check_read_class(unsigned *classes, unsigned tag, unsigned node)
 {
         /* Non-nodes are implicitly ok */
@@ -137,7 +137,7 @@ check_read_class(unsigned *classes, unsigned tag, unsigned node)
         }
 }
 
-static bool
+static bool ASSERTED
 check_write_class(unsigned *classes, unsigned tag, unsigned node)
 {
         /* Non-nodes are implicitly ok */
@@ -203,6 +203,7 @@ mir_lower_special_reads(compiler_context *ctx)
                         mark_node_class(ldst, ins->src[0]);
                         mark_node_class(ldst, ins->src[1]);
                         mark_node_class(ldst, ins->src[2]);
+                        mark_node_class(ldst, ins->src[3]);
                         break;
 
                 case TAG_TEXTURE_4:
@@ -488,6 +489,12 @@ allocate_registers(compiler_context *ctx, bool *spilled)
                 if (size == 16)
                         min_bound[dest] = 8;
 
+                mir_foreach_src(ins, s) {
+                        unsigned src_size = nir_alu_type_get_type_size(ins->src_types[s]);
+                        if (src_size == 16 && ins->src[s] < SSA_FIXED_MINIMUM)
+                                min_bound[ins->src[s]] = MAX2(min_bound[ins->src[s]], 8);
+                }
+
                 /* We don't have a swizzle for the conditional and we don't
                  * want to muck with the conditional itself, so just force
                  * alignment for now */
@@ -529,12 +536,14 @@ allocate_registers(compiler_context *ctx, bool *spilled)
                         set_class(l->class, ins->src[0], REG_CLASS_LDST);
                         set_class(l->class, ins->src[1], REG_CLASS_LDST);
                         set_class(l->class, ins->src[2], REG_CLASS_LDST);
+                        set_class(l->class, ins->src[3], REG_CLASS_LDST);
 
                         if (OP_IS_VEC4_ONLY(ins->op)) {
                                 lcra_restrict_range(l, ins->dest, 16);
                                 lcra_restrict_range(l, ins->src[0], 16);
                                 lcra_restrict_range(l, ins->src[1], 16);
                                 lcra_restrict_range(l, ins->src[2], 16);
+                                lcra_restrict_range(l, ins->src[3], 16);
                         }
                 } else if (ins->type == TAG_TEXTURE_4) {
                         set_class(l->class, ins->dest, REG_CLASS_TEXW);
@@ -551,6 +560,7 @@ allocate_registers(compiler_context *ctx, bool *spilled)
                 assert(check_read_class(l->class, ins->type, ins->src[0]));
                 assert(check_read_class(l->class, ins->type, ins->src[1]));
                 assert(check_read_class(l->class, ins->type, ins->src[2]));
+                assert(check_read_class(l->class, ins->type, ins->src[3]));
         }
 
         /* Mark writeout to r0, depth to r1.x, stencil to r1.y,
@@ -719,25 +729,17 @@ install_registers_instr(
 
                 /* We also follow up by actual arguments */
 
-                unsigned src2 = ins->src[1];
-                unsigned src3 = ins->src[2];
-
-                if (src2 != ~0) {
-                        struct phys_reg src = index_to_reg(ctx, l, src2, 2);
-                        unsigned component = src.offset >> src.shift;
-                        assert(component << src.shift == src.offset);
-                        ins->src[1] = SSA_FIXED_REGISTER(src.reg);
-                        ins->swizzle[1][0] = component;
+                for (int i = 1; i <= 3; i++) {
+                        unsigned src_index = ins->src[i];
+                        if (src_index != ~0) {
+                                struct phys_reg src = index_to_reg(ctx, l, src_index, src_shift[i]);
+                                unsigned component = src.offset >> src.shift;
+                                assert(component << src.shift == src.offset);
+                                ins->src[i] = SSA_FIXED_REGISTER(src.reg);
+                                ins->swizzle[i][0] += component;
+                        }
                 }
 
-                if (src3 != ~0) {
-                        struct phys_reg src = index_to_reg(ctx, l, src3, 2);
-                        unsigned component = src.offset >> src.shift;
-                        assert(component << src.shift == src.offset);
-                        ins->src[2] = SSA_FIXED_REGISTER(src.reg);
-                        ins->swizzle[2][0] = component;
-                }
- 
                 break;
         }
 
@@ -954,6 +956,51 @@ mir_spill_register(
         }
 }
 
+static void
+mir_demote_uniforms(compiler_context *ctx, unsigned new_cutoff)
+{
+        unsigned old_work_count = 16 - MAX2((ctx->uniform_cutoff - 8), 0);
+        unsigned work_count = 16 - MAX2((new_cutoff - 8), 0);
+
+        unsigned min_demote = SSA_FIXED_REGISTER(old_work_count);
+        unsigned max_demote = SSA_FIXED_REGISTER(work_count);
+
+        ctx->uniform_cutoff = new_cutoff;
+
+        mir_foreach_block(ctx, _block) {
+                midgard_block *block = (midgard_block *) _block;
+                mir_foreach_instr_in_block(block, ins) {
+                        mir_foreach_src(ins, i) {
+                                if (ins->src[i] < min_demote || ins->src[i] >= max_demote)
+                                        continue;
+
+                                midgard_instruction *before = ins;
+
+                                unsigned temp = make_compiler_temp(ctx);
+
+                                midgard_instruction ld = {
+                                        .type = TAG_LOAD_STORE_4,
+                                        .mask = 0xF,
+                                        .dest = temp,
+                                        .dest_type = ins->src_types[i],
+                                        .src = { ~0, ~0, ~0, ~0 },
+                                        .swizzle = SWIZZLE_IDENTITY_4,
+                                        .op = midgard_op_ld_ubo_int4,
+                                        .load_store = {
+                                                .arg_2 = 0x1E,
+                                        },
+                                };
+
+                                ld.constants.u32[0] = (23 - SSA_REG_FROM_FIXED(ins->src[i])) * 16;
+
+                                mir_insert_instruction_before_scheduled(ctx, block, before, ld);
+
+                                mir_rewrite_index_src_single(ins, ins->src[i], temp);
+                        }
+                }
+        }
+}
+
 /* Run register allocation in a loop, spilling until we succeed */
 
 void
@@ -964,7 +1011,7 @@ mir_ra(compiler_context *ctx)
         int iter_count = 1000; /* max iterations */
 
         /* Number of 128-bit slots in memory we've spilled into */
-        unsigned spill_count = 0;
+        unsigned spill_count = DIV_ROUND_UP(ctx->tls_size, 16);
 
 
         mir_create_pipeline_registers(ctx);
@@ -973,12 +1020,19 @@ mir_ra(compiler_context *ctx)
                 if (spilled) {
                         signed spill_node = mir_choose_spill_node(ctx, l);
 
-                        if (spill_node == -1) {
-                                fprintf(stderr, "ERROR: Failed to choose spill node\n");
-                                return;
-                        }
+                        /* It's a lot cheaper to demote uniforms to get more
+                         * work registers than to spill to TLS. */
+                        if (l->spill_class == REG_CLASS_WORK &&
+                            ctx->uniform_cutoff > 8) {
 
-                        mir_spill_register(ctx, spill_node, l->spill_class, &spill_count);
+                                mir_demote_uniforms(ctx, MAX2(ctx->uniform_cutoff - 4, 8));
+                        } else if (spill_node == -1) {
+                                fprintf(stderr, "ERROR: Failed to choose spill node\n");
+                                lcra_free(l);
+                                return;
+                        } else {
+                                mir_spill_register(ctx, spill_node, l->spill_class, &spill_count);
+                        }
                 }
 
                 mir_squeeze_index(ctx);

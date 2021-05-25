@@ -30,8 +30,6 @@
 
 #include <assert.h>
 
-struct nir_variable;
-
 #define AC_LLVM_MAX_OUTPUTS (VARYING_SLOT_VAR31 + 1)
 
 #define AC_MAX_INLINE_PUSH_CONSTS 8
@@ -79,21 +77,21 @@ struct ac_shader_abi {
    void (*emit_vertex_with_counter)(struct ac_shader_abi *abi, unsigned stream,
                                     LLVMValueRef vertexidx, LLVMValueRef *addrs);
 
-   LLVMValueRef (*load_inputs)(struct ac_shader_abi *abi, unsigned location,
+   LLVMValueRef (*load_inputs)(struct ac_shader_abi *abi,
                                unsigned driver_location, unsigned component,
-                               unsigned num_components, unsigned vertex_index, unsigned const_index,
+                               unsigned num_components, unsigned vertex_index,
                                LLVMTypeRef type);
 
    LLVMValueRef (*load_tess_varyings)(struct ac_shader_abi *abi, LLVMTypeRef type,
                                       LLVMValueRef vertex_index, LLVMValueRef param_index,
-                                      unsigned const_index, unsigned location,
                                       unsigned driver_location, unsigned component,
-                                      unsigned num_components, bool is_patch, bool is_compact,
-                                      bool load_inputs);
+                                      unsigned num_components,
+                                      bool load_inputs, bool vertex_index_is_invoc_id);
 
-   void (*store_tcs_outputs)(struct ac_shader_abi *abi, const struct nir_variable *var,
+   void (*store_tcs_outputs)(struct ac_shader_abi *abi,
                              LLVMValueRef vertex_index, LLVMValueRef param_index,
-                             unsigned const_index, LLVMValueRef src, unsigned writemask);
+                             LLVMValueRef src, unsigned writemask,
+                             unsigned component, unsigned location, unsigned driver_location);
 
    LLVMValueRef (*load_tess_coord)(struct ac_shader_abi *abi);
 
@@ -102,7 +100,9 @@ struct ac_shader_abi {
    LLVMValueRef (*load_tess_level)(struct ac_shader_abi *abi, unsigned varying_id,
                                    bool load_default_state);
 
-   LLVMValueRef (*load_ubo)(struct ac_shader_abi *abi, LLVMValueRef index);
+   LLVMValueRef (*load_ubo)(struct ac_shader_abi *abi,
+                            unsigned desc_set, unsigned binding,
+                            bool valid_binding, LLVMValueRef index);
 
    /**
     * Load the descriptor for the given buffer.
@@ -145,7 +145,7 @@ struct ac_shader_abi {
 
    LLVMValueRef (*load_sample_mask_in)(struct ac_shader_abi *abi);
 
-   LLVMValueRef (*load_base_vertex)(struct ac_shader_abi *abi);
+   LLVMValueRef (*load_base_vertex)(struct ac_shader_abi *abi, bool non_indexed_is_zero);
 
    LLVMValueRef (*emit_fbfetch)(struct ac_shader_abi *abi);
 
@@ -165,6 +165,11 @@ struct ac_shader_abi {
 
    /* Clamp div by 0 (so it won't produce NaN) */
    bool clamp_div_by_zero;
+
+   /* Whether gl_FragCoord.z should be adjusted for VRS due to a hw bug on
+    * some GFX10.3 chips.
+    */
+   bool adjust_frag_coord_z;
 };
 
 #endif /* AC_SHADER_ABI_H */
