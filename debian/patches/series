@@ -5,3 +5,4 @@ src_glx_dri_common.h.diff
 clover-fix-build-with-llvm-12.diff
 iris-avoid-abort-if-enomem.diff
 amd-add-missing-line-from-backport.diff
+0001-Cherry-pick-upstream-commits-to-fix-the-distored-dis.diff
