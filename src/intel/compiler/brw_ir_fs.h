@@ -451,13 +451,15 @@ regs_written(const fs_inst *inst)
  * Return the number of dataflow registers read by the instruction (either
  * fully or partially) counted from 'floor(reg_offset(inst->src[i]) /
  * register_size)'.  The somewhat arbitrary register size unit is 4B for the
- * UNIFORM and IMM files and 32B for all other files.
+ * UNIFORM files and 32B for all other files.
  */
 inline unsigned
 regs_read(const fs_inst *inst, unsigned i)
 {
-   const unsigned reg_size =
-      inst->src[i].file == UNIFORM || inst->src[i].file == IMM ? 4 : REG_SIZE;
+   if (inst->src[i].file == IMM)
+      return 1;
+
+   const unsigned reg_size = inst->src[i].file == UNIFORM ? 4 : REG_SIZE;
    return DIV_ROUND_UP(reg_offset(inst->src[i]) % reg_size +
                        inst->size_read(i) -
                        MIN2(inst->size_read(i), reg_padding(inst->src[i])),
@@ -547,7 +549,8 @@ is_unordered(const fs_inst *inst)
  */
 static inline bool
 has_dst_aligned_region_restriction(const gen_device_info *devinfo,
-                                   const fs_inst *inst)
+                                   const fs_inst *inst,
+                                   brw_reg_type dst_type)
 {
    const brw_reg_type exec_type = get_exec_type(inst);
    /* Even though the hardware spec claims that "integer DWord multiply"
@@ -561,11 +564,18 @@ has_dst_aligned_region_restriction(const gen_device_info *devinfo,
        (inst->opcode == BRW_OPCODE_MAD &&
         MIN2(type_sz(inst->src[1].type), type_sz(inst->src[2].type)) >= 4));
 
-   if (type_sz(inst->dst.type) > 4 || type_sz(exec_type) > 4 ||
+   if (type_sz(dst_type) > 4 || type_sz(exec_type) > 4 ||
        (type_sz(exec_type) == 4 && is_dword_multiply))
       return devinfo->is_cherryview || gen_device_info_is_9lp(devinfo);
    else
       return false;
+}
+
+static inline bool
+has_dst_aligned_region_restriction(const gen_device_info *devinfo,
+                                   const fs_inst *inst)
+{
+   return has_dst_aligned_region_restriction(devinfo, inst, inst->dst.type);
 }
 
 /**

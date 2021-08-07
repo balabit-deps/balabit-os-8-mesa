@@ -162,7 +162,7 @@ calculate_iterations(ir_rvalue *from, ir_rvalue *to, ir_rvalue *increment,
          iter = new(mem_ctx) ir_constant(iter_value + bias[i]);
          break;
       case GLSL_TYPE_INT16:
-         iter = new(mem_ctx) ir_constant(uint16_t(iter_value + bias[i]));
+         iter = new(mem_ctx) ir_constant(int16_t(iter_value + bias[i]));
          break;
       case GLSL_TYPE_UINT:
          iter = new(mem_ctx) ir_constant(unsigned(iter_value + bias[i]));
@@ -355,10 +355,8 @@ loop_terminator *
 loop_variable_state::insert(ir_if *if_stmt, bool continue_from_then)
 {
    void *mem_ctx = ralloc_parent(this);
-   loop_terminator *t = new(mem_ctx) loop_terminator();
-
-   t->ir = if_stmt;
-   t->continue_from_then = continue_from_then;
+   loop_terminator *t = new(mem_ctx) loop_terminator(if_stmt,
+                                                     continue_from_then);
 
    this->terminators.push_tail(t);
 

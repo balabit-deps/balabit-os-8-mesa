@@ -132,7 +132,7 @@ static void combine_flags(unsigned *dstflags, struct ir3_instruction *src)
 	*dstflags |= srcflags & IR3_REG_IMMED;
 	*dstflags |= srcflags & IR3_REG_RELATIV;
 	*dstflags |= srcflags & IR3_REG_ARRAY;
-	*dstflags |= srcflags & IR3_REG_HIGH;
+	*dstflags |= srcflags & IR3_REG_SHARED;
 
 	/* if src of the src is boolean we can drop the (abs) since we know
 	 * the source value is already a postitive integer.  This cleans
@@ -338,6 +338,9 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 		struct ir3_register *src_reg = src->regs[1];
 		unsigned new_flags = reg->flags;
 
+		if (src_reg->flags & IR3_REG_ARRAY)
+			return false;
+
 		combine_flags(&new_flags, src);
 
 		if (!ir3_valid_flags(instr, n, new_flags)) {
@@ -393,6 +396,13 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 					return false;
 				if (!is_cat2_float(instr->opc) && !is_cat3_float(instr->opc))
 					return false;
+			} else if (src->cat1.dst_type == TYPE_U16) {
+				/* Since we set CONSTANT_DEMOTION_ENABLE, a float reference of
+				 * what was a U16 value read from the constbuf would incorrectly
+				 * do 32f->16f conversion, when we want to read a 16f value.
+				 */
+				if (is_cat2_float(instr->opc) || is_cat3_float(instr->opc))
+					return false;
 			}
 
 			src_reg = ir3_reg_clone(instr->block->shader, src_reg);
@@ -401,16 +411,6 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 
 			if (src_reg->flags & IR3_REG_RELATIV)
 				ir3_instr_set_address(instr, reg->instr->address);
-
-			return true;
-		}
-
-		if ((src_reg->flags & IR3_REG_RELATIV) &&
-				!conflicts(instr->address, reg->instr->address)) {
-			src_reg = ir3_reg_clone(instr->block->shader, src_reg);
-			src_reg->flags = new_flags;
-			instr->regs[n+1] = src_reg;
-			ir3_instr_set_address(instr, reg->instr->address);
 
 			return true;
 		}

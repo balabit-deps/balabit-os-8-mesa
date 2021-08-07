@@ -33,6 +33,8 @@
 #include <assert.h>
 #include <getopt.h>
 
+#include "util/os_file.h"
+
 #include "afuc.h"
 #include "rnn.h"
 #include "rnndec.h"
@@ -233,7 +235,7 @@ static int label_idx(uint32_t offset, bool create)
 static const char *
 label_name(uint32_t offset, bool allow_jt)
 {
-	static char name[8];
+	static char name[12];
 	int lidx;
 
 	if (allow_jt) {
@@ -279,7 +281,7 @@ static int fxn_idx(uint32_t offset, bool create)
 static const char *
 fxn_name(uint32_t offset)
 {
-	static char name[8];
+	static char name[14];
 	int fidx = fxn_idx(offset, false);
 	if (fidx < 0)
 		return NULL;
@@ -337,6 +339,10 @@ static void disasm(uint32_t *buf, int sizedwords)
 			break;
 		case OPC_CALL:
 			fxn_idx(instr->call.uoff, true);
+			break;
+		case OPC_SETSECURE:
+			/* this implicitly jumps to pc + 3 if successful */
+			label_idx(i + 3, true);
 			break;
 		default:
 			break;
@@ -502,6 +508,8 @@ static void disasm(uint32_t *buf, int sizedwords)
 
 			if (rep)
 				printf("(rep)");
+			if (instr->alu.xmov)
+				printf("(xmov%d)", instr->alu.xmov);
 
 			/* special case mnemonics:
 			 *   reading $00 seems to always yield zero, and so:
@@ -527,10 +535,58 @@ static void disasm(uint32_t *buf, int sizedwords)
 			/* print out unexpected bits: */
 			if (verbose) {
 				if (instr->alu.pad)
-					printerr("  (pad=%03x)", instr->alu.pad);
+					printerr("  (pad=%01x)", instr->alu.pad);
 				if (instr->alu.src1 && !src1)
 					printerr("  (src1=%02x)", instr->alu.src1);
 			}
+
+			/* xmov is a modifier that makes the processor execute up to 3
+			 * extra mov's after the current instruction. Given an ALU
+			 * instruction:
+			 *
+			 * (xmovN) alu $dst, $src1, $src2
+			 *
+			 * In all of the uses in the firmware blob, $dst and $src2 are one
+			 * of the "special" registers $data, $addr, $addr2. I've observed
+			 * that if $dst isn't "special" then it's replaced with $00
+			 * instead of $data, but I haven't checked what happens if $src2
+			 * isn't "special".  Anyway, in the usual case, the HW produces a
+			 * count M = min(N, $rem) and then does the following:
+			 *
+			 * M = 1:
+			 * mov $data, $src2
+			 *
+			 * M = 2:
+			 * mov $data, $src2
+			 * mov $data, $src2
+			 *
+			 * M = 3:
+			 * mov $data, $src2
+			 * mov $dst, $src2 (special case for CP_CONTEXT_REG_BUNCH)
+			 * mov $data, $src2
+			 *
+			 * It seems to be frequently used in combination with (rep) to
+			 * provide a kind of hardware-based loop unrolling, and there's
+			 * even a special case in the ISA to be able to do this with
+			 * CP_CONTEXT_REG_BUNCH. However (rep) isn't required.
+			 *
+			 * This dumps the expected extra instructions, assuming that $rem
+			 * isn't too small.
+			 */
+			if (verbose && instr->alu.xmov) {
+				for (int i = 0; i < instr->alu.xmov; i++) {
+					printf("\n        ; mov ");
+					if (instr->alu.dst < 0x1d)
+						printf("$00");
+					else if (instr->alu.xmov == 3 && i == 1)
+						print_dst(instr->alu.dst);
+					else
+						printf("$data");
+					printf(", ");
+					print_src(instr->alu.src2);
+				}
+			}
+
 			break;
 		}
 		case OPC_CWRITE6:
@@ -652,9 +708,12 @@ static void disasm(uint32_t *buf, int sizedwords)
 			break;
 		case OPC_RET:
 			assert(!rep);
-			if (instr->pad)
+			if (instr->ret.pad)
 				printf("[%08x]  ; ", instrs[i]);
-			printf("ret");
+			if (instr->ret.interrupt)
+				printf("iret");
+			else
+				printf("ret");
 			break;
 		case OPC_WIN:
 			assert(!rep);
@@ -667,9 +726,22 @@ static void disasm(uint32_t *buf, int sizedwords)
 		case OPC_PREEMPTLEAVE6:
 			if (gpuver < 6) {
 				printf("[%08x]  ; op38", instrs[i]);
+			} else {
+				printf("preemptleave #");
+				printlbl("%s", label_name(instr->call.uoff, true));
 			}
-			printf("preemptleave #");
-			printlbl("%s", label_name(instr->call.uoff, true));
+			break;
+		case OPC_SETSECURE:
+			/* Note: This seems to implicitly read the secure/not-secure state
+			 * to set from the low bit of $02, and implicitly jumps to pc + 3
+			 * (i.e. skipping the next two instructions) if it succeeds. We
+			 * print these implicit parameters to make reading the disassembly
+			 * easier.
+			 */
+			if (instr->pad)
+				printf("[%08x]  ; ", instrs[i]);
+			printf("setsecure $02, #");
+			printlbl("%s", label_name(i + 3, true));
 			break;
 		default:
 			printerr("[%08x]", instrs[i]);
@@ -703,34 +775,6 @@ static void disasm(uint32_t *buf, int sizedwords)
 	}
 }
 
-#define CHUNKSIZE 4096
-
-static char * readfile(const char *path, int *sz)
-{
-	char *buf = NULL;
-	int fd, ret, n = 0;
-
-	fd = open(path, O_RDONLY);
-	if (fd < 0)
-		return NULL;
-
-	while (1) {
-		buf = realloc(buf, n + CHUNKSIZE);
-		ret = read(fd, buf + n, CHUNKSIZE);
-		if (ret < 0) {
-			free(buf);
-			*sz = 0;
-			return NULL;
-		} else if (ret < CHUNKSIZE) {
-			n += ret;
-			*sz = n;
-			return buf;
-		} else {
-			n += CHUNKSIZE;
-		}
-	}
-}
-
 static void usage(void)
 {
 	fprintf(stderr, "Usage:\n"
@@ -747,7 +791,8 @@ int main(int argc, char **argv)
 	uint32_t *buf;
 	char *file, *control_reg_name;
 	bool colors = false;
-	int sz, c;
+	size_t sz;
+	int c;
 
 	/* Argument parsing: */
 	while ((c = getopt (argc, argv, "g:vc")) != -1) {
@@ -814,7 +859,7 @@ int main(int argc, char **argv)
 
 	rnndec_varadd(ctx, "chip", variant);
 
-	buf = (uint32_t *)readfile(file, &sz);
+	buf = (uint32_t *)os_read_file(file, &sz);
 
 	printf("; Disassembling microcode: %s\n", file);
 	printf("; Version: %08x\n\n", buf[1]);

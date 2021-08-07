@@ -1009,7 +1009,8 @@ tfeedback_decl::init(struct gl_context *ctx, const void *mem_ctx,
 
    /* Parse a declaration. */
    const char *base_name_end;
-   long subscript = parse_program_resource_name(input, &base_name_end);
+   long subscript = parse_program_resource_name(input, strlen(input),
+                                                &base_name_end);
    this->var_name = ralloc_strndup(mem_ctx, input, base_name_end - input);
    if (this->var_name == NULL) {
       _mesa_error_no_memory(__func__);
@@ -2840,6 +2841,7 @@ assign_varying_locations(struct gl_context *ctx,
           !tfeedback_decls[i].is_aligned(dmul, matched_candidate->offset)) ||
          (matched_candidate->toplevel_var->data.explicit_location &&
           matched_candidate->toplevel_var->data.location < VARYING_SLOT_VAR0 &&
+          (!consumer || consumer->Stage == MESA_SHADER_FRAGMENT) &&
           (ctx->Const.ShaderCompilerOptions[producer->Stage].LowerBuiltinVariablesXfb &
               BITFIELD_BIT(matched_candidate->toplevel_var->data.location)));
 

@@ -392,7 +392,9 @@ add_var_use_deref(nir_deref_instr *deref, struct hash_table *live,
 
    deref = path.path[0];
    if (deref->deref_type != nir_deref_type_var ||
-       deref->mode & ~(nir_var_uniform | nir_var_mem_ubo | nir_var_mem_ssbo)) {
+       !nir_deref_mode_is_one_of(deref, nir_var_uniform |
+                                        nir_var_mem_ubo |
+                                        nir_var_mem_ssbo)) {
       nir_deref_path_finish(&path);
       return;
    }
@@ -482,7 +484,7 @@ add_var_use_deref(nir_deref_instr *deref, struct hash_table *live,
       util_dynarray_append(ainfo->deref_list, nir_deref_instr *, deref);
    }
 
-   assert(deref->mode == deref->var->data.mode);
+   assert(deref->modes == deref->var->data.mode);
    _mesa_hash_table_insert(live, deref->var->name, ainfo);
 }
 
@@ -657,7 +659,7 @@ add_parameter(struct gl_uniform_storage *uniform,
 
    struct gl_program_parameter_list *params = state->params;
    int base_index = params->NumParameters;
-   _mesa_reserve_parameter_storage(params, num_params);
+   _mesa_reserve_parameter_storage(params, num_params, num_params);
 
    if (ctx->Const.PackedDriverUniformStorage) {
       for (unsigned i = 0; i < num_params; i++) {
@@ -1727,63 +1729,68 @@ gl_nir_link_uniforms(struct gl_context *ctx,
             }
          }
 
-         if (!prog->data->spirv && state.var_is_in_block &&
-             glsl_without_array(state.current_var->type) != state.current_var->interface_type) {
+         if (!prog->data->spirv && state.var_is_in_block) {
+            if (glsl_without_array(state.current_var->type) != state.current_var->interface_type) {
+               /* this is nested at some offset inside the block */
+               bool found = false;
+               char sentinel = '\0';
 
-            bool found = false;
-            char sentinel = '\0';
-
-            if (glsl_type_is_struct(state.current_var->type)) {
-               sentinel = '.';
-            } else if (glsl_type_is_array(state.current_var->type) &&
-                       (glsl_type_is_array(glsl_get_array_element(state.current_var->type))
-                        || glsl_type_is_struct(glsl_without_array(state.current_var->type)))) {
-              sentinel = '[';
-            }
-
-            const unsigned l = strlen(state.current_var->name);
-            for (unsigned i = 0; i < num_blocks; i++) {
-               for (unsigned j = 0; j < blocks[i].NumUniforms; j++) {
-                 if (sentinel) {
-                     const char *begin = blocks[i].Uniforms[j].Name;
-                     const char *end = strchr(begin, sentinel);
-
-                     if (end == NULL)
-                        continue;
-
-                     if ((ptrdiff_t) l != (end - begin))
-                        continue;
-                     found = strncmp(state.current_var->name, begin, l) == 0;
-                  } else {
-                     found = strcmp(state.current_var->name, blocks[i].Uniforms[j].Name) == 0;
-                  }
-
-                  if (found) {
-                     location = j;
-
-                     struct hash_entry *entry =
-                        _mesa_hash_table_search(state.referenced_uniforms[shader_type], var->name);
-                     if (entry)
-                        blocks[i].stageref |= 1U << shader_type;
-
-                     break;
-                  }
+               if (glsl_type_is_struct(state.current_var->type)) {
+                  sentinel = '.';
+               } else if (glsl_type_is_array(state.current_var->type) &&
+                          (glsl_type_is_array(glsl_get_array_element(state.current_var->type))
+                           || glsl_type_is_struct(glsl_without_array(state.current_var->type)))) {
+                 sentinel = '[';
                }
 
-               if (found)
-                  break;
-            }
-            assert(found);
+               const unsigned l = strlen(state.current_var->name);
+               for (unsigned i = 0; i < num_blocks; i++) {
+                  for (unsigned j = 0; j < blocks[i].NumUniforms; j++) {
+                    if (sentinel) {
+                        const char *begin = blocks[i].Uniforms[j].Name;
+                        const char *end = strchr(begin, sentinel);
 
+                        if (end == NULL)
+                           continue;
+
+                        if ((ptrdiff_t) l != (end - begin))
+                           continue;
+                        found = strncmp(state.current_var->name, begin, l) == 0;
+                     } else {
+                        found = strcmp(state.current_var->name, blocks[i].Uniforms[j].Name) == 0;
+                     }
+
+                     if (found) {
+                        location = j;
+
+                        struct hash_entry *entry =
+                           _mesa_hash_table_search(state.referenced_uniforms[shader_type], var->name);
+                        if (entry)
+                           blocks[i].stageref |= 1U << shader_type;
+
+                        break;
+                     }
+                  }
+
+                  if (found)
+                     break;
+               }
+               assert(found);
+               var->data.location = location;
+            } else {
+               /* this is the base block offset */
+               var->data.location = buffer_block_index;
+               location = 0;
+            }
+            assert(buffer_block_index >= 0);
             const struct gl_uniform_block *const block =
                &blocks[buffer_block_index];
-            assert(location != -1);
+            assert(location >= 0 && location < block->NumUniforms);
 
             const struct gl_uniform_buffer_variable *const ubo_var =
                &block->Uniforms[location];
 
             state.offset = ubo_var->Offset;
-            var->data.location = location;
          }
 
          /* Check if the uniform has been processed already for

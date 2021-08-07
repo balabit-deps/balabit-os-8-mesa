@@ -486,10 +486,13 @@ dri_screen_create_sw(struct gbm_dri_device *dri)
       return -errno;
 
    ret = dri_screen_create_dri2(dri, driver_name);
-   if (ret == 0)
+   if (ret != 0)
+      ret = dri_screen_create_swrast(dri);
+   if (ret != 0)
       return ret;
 
-   return dri_screen_create_swrast(dri);
+   dri->software = true;
+   return 0;
 }
 
 static const struct gbm_dri_visual gbm_dri_visuals_table[] = {
@@ -1142,6 +1145,8 @@ gbm_dri_bo_create(struct gbm_device *gbm,
       dri_use |= __DRI_IMAGE_USE_CURSOR;
    if (usage & GBM_BO_USE_LINEAR)
       dri_use |= __DRI_IMAGE_USE_LINEAR;
+   if (usage & GBM_BO_USE_PROTECTED)
+      dri_use |= __DRI_IMAGE_USE_PROTECTED;
 
    /* Gallium drivers requires shared in order to get the handle/stride */
    dri_use |= __DRI_IMAGE_USE_SHARE;

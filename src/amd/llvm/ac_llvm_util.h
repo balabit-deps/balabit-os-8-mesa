@@ -27,6 +27,7 @@
 #define AC_LLVM_UTIL_H
 
 #include "amd_family.h"
+#include "util/macros.h"
 #include <llvm-c/TargetMachine.h>
 #include <llvm/Config/llvm-config.h>
 
@@ -37,6 +38,7 @@ extern "C" {
 #endif
 
 struct ac_compiler_passes;
+struct ac_llvm_context;
 
 enum ac_func_attr
 {
@@ -60,8 +62,6 @@ enum ac_func_attr
 enum ac_target_machine_options
 {
    AC_TM_SUPPORTS_SPILL = (1 << 0),
-   AC_TM_FORCE_ENABLE_XNACK = (1 << 1),
-   AC_TM_FORCE_DISABLE_XNACK = (1 << 2),
    AC_TM_PROMOTE_ALLOCA_TO_SCRATCH = (1 << 3),
    AC_TM_CHECK_IR = (1 << 4),
    AC_TM_ENABLE_GLOBAL_ISEL = (1 << 5),
@@ -110,6 +110,8 @@ bool ac_llvm_is_function(LLVMValueRef v);
 LLVMModuleRef ac_create_module(LLVMTargetMachineRef tm, LLVMContextRef ctx);
 
 LLVMBuilderRef ac_create_builder(LLVMContextRef ctx, enum ac_float_mode float_mode);
+void ac_enable_signed_zeros(struct ac_llvm_context *ctx);
+void ac_disable_signed_zeros(struct ac_llvm_context *ctx);
 
 void ac_llvm_add_target_dep_function_attr(LLVMValueRef F, const char *name, unsigned value);
 void ac_llvm_set_workgroup_size(LLVMValueRef F, unsigned size);
@@ -125,7 +127,7 @@ unsigned ac_count_scratch_private_memory(LLVMValueRef function);
 
 LLVMTargetLibraryInfoRef ac_create_target_library_info(const char *triple);
 void ac_dispose_target_library_info(LLVMTargetLibraryInfoRef library_info);
-void ac_init_shared_llvm_once(void); /* Do not use directly, use ac_init_llvm_once */
+PUBLIC void ac_init_shared_llvm_once(void); /* Do not use directly, use ac_init_llvm_once */
 void ac_init_llvm_once(void);
 
 bool ac_init_llvm_compiler(struct ac_llvm_compiler *compiler, enum radeon_family family,

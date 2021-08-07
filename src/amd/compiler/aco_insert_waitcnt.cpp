@@ -28,7 +28,7 @@
 #include <math.h>
 
 #include "aco_ir.h"
-#include "vulkan/radv_shader.h"
+#include "sid.h"
 
 namespace aco {
 
@@ -204,9 +204,9 @@ struct wait_entry {
    bool has_vmem_nosampler:1;
    bool has_vmem_sampler:1;
 
-   wait_entry(wait_event event, wait_imm imm, bool logical, bool wait_on_read)
-           : imm(imm), events(event), counters(get_counters_for_event(event)),
-             wait_on_read(wait_on_read), logical(logical),
+   wait_entry(wait_event event_, wait_imm imm_, bool logical_, bool wait_on_read_)
+           : imm(imm_), events(event_), counters(get_counters_for_event(event_)),
+             wait_on_read(wait_on_read_), logical(logical_),
              has_vmem_nosampler(false), has_vmem_sampler(false) {}
 
    bool join(const wait_entry& other)
@@ -314,38 +314,41 @@ struct wait_ctx {
       pending_flat_vm |= other->pending_flat_vm;
       pending_s_buffer_store |= other->pending_s_buffer_store;
 
-      for (std::pair<PhysReg,wait_entry> entry : other->gpr_map)
+      for (const auto& entry : other->gpr_map)
       {
-         std::map<PhysReg,wait_entry>::iterator it = gpr_map.find(entry.first);
          if (entry.second.logical != logical)
             continue;
 
-         if (it != gpr_map.end()) {
-            changed |= it->second.join(entry.second);
-         } else {
-            gpr_map.insert(entry);
+         using iterator = std::map<PhysReg,wait_entry>::iterator;
+         const std::pair<iterator, bool> insert_pair = gpr_map.insert(entry);
+         if (insert_pair.second) {
             changed = true;
+         } else {
+            changed |= insert_pair.first->second.join(entry.second);
          }
       }
 
       for (unsigned i = 0; i < storage_count; i++) {
          changed |= barrier_imm[i].combine(other->barrier_imm[i]);
-         changed |= other->barrier_events[i] & ~barrier_events[i];
+         changed |= (other->barrier_events[i] & ~barrier_events[i]) != 0;
          barrier_events[i] |= other->barrier_events[i];
       }
 
       /* these are used for statistics, so don't update "changed" */
       for (unsigned i = 0; i < num_counters; i++) {
-         for (std::pair<Instruction *, unsigned> instr : other->unwaited_instrs[i]) {
-            auto pos = unwaited_instrs[i].find(instr.first);
-            if (pos == unwaited_instrs[i].end())
-               unwaited_instrs[i].insert(instr);
-            else
+         for (const auto& instr : other->unwaited_instrs[i]) {
+            using iterator = std::map<Instruction *, unsigned>::iterator;
+            const std::pair<iterator, bool> insert_pair = unwaited_instrs[i].insert(instr);
+            if (!insert_pair.second) {
+               const iterator pos = insert_pair.first;
                pos->second = std::min(pos->second, instr.second);
+            }
          }
-         /* don't use a foreach loop to avoid copies */
-         for (auto it = other->reg_instrs[i].begin(); it != other->reg_instrs[i].end(); ++it)
-            reg_instrs[i][it->first].insert(it->second.begin(), it->second.end());
+         for (const auto& instr_pair : other->reg_instrs[i]) {
+            const PhysReg reg = instr_pair.first;
+            const std::set<Instruction *>& instrs = instr_pair.second;
+            reg_instrs[i][reg].insert(instrs.begin(), instrs.end());
+         }
       }
 
       return changed;
@@ -366,7 +369,7 @@ struct wait_ctx {
                wait_distances[event_idx].push_back(distance);
             }
 
-            unwaited_instrs[counter_idx].erase(instr);
+            unwaited_instrs[counter_idx].erase(pos);
          }
          reg_instrs[counter_idx][reg].clear();
       }
@@ -377,8 +380,8 @@ struct wait_ctx {
    void advance_unwaited_instrs()
    {
       for (unsigned i = 0; i < num_counters; i++) {
-         for (auto it = unwaited_instrs[i].begin(); it != unwaited_instrs[i].end(); ++it)
-            it->second++;
+         for (std::pair<Instruction * const, unsigned>& instr : unwaited_instrs[i])
+            instr.second++;
       }
    }
 };
@@ -473,9 +476,32 @@ wait_imm perform_barrier(wait_ctx& ctx, memory_sync_info sync, unsigned semantic
    return imm;
 }
 
+void force_waitcnt(wait_ctx& ctx, wait_imm& imm)
+{
+   if (ctx.vm_cnt)
+      imm.vm = 0;
+   if (ctx.exp_cnt)
+      imm.exp = 0;
+   if (ctx.lgkm_cnt)
+      imm.lgkm = 0;
+
+   if (ctx.chip_class >= GFX10) {
+      if (ctx.vs_cnt)
+         imm.vs = 0;
+   }
+}
+
 wait_imm kill(Instruction* instr, wait_ctx& ctx, memory_sync_info sync_info)
 {
    wait_imm imm;
+
+   if (debug_flags & DEBUG_FORCE_WAITCNT) {
+      /* Force emitting waitcnt states right after the instruction if there is
+       * something to wait for.
+       */
+      force_waitcnt(ctx, imm);
+   }
+
    if (ctx.exp_cnt || ctx.vm_cnt || ctx.lgkm_cnt)
       imm.combine(check_instr(instr, ctx));
 
@@ -502,6 +528,24 @@ wait_imm kill(Instruction* instr, wait_ctx& ctx, memory_sync_info sync_info)
           !smem->definitions.empty() &&
           !smem->sync.can_reorder()) {
          imm.lgkm = 0;
+      }
+   }
+
+   if (ctx.program->early_rast &&
+       instr->opcode == aco_opcode::exp) {
+
+      Export_instruction *exp = static_cast<Export_instruction *>(instr);
+      if (exp->dest >= V_008DFC_SQ_EXP_POS &&
+          exp->dest < V_008DFC_SQ_EXP_PRIM) {
+
+         /* With early_rast, the HW will start clipping and rasterization after the 1st DONE pos export.
+          * Wait for all stores (and atomics) to complete, so PS can read them.
+          * TODO: This only really applies to DONE pos exports. Consider setting the DONE bit earlier.
+          */
+         if (ctx.vs_cnt > 0)
+            imm.vs = 0;
+         if (ctx.vm_cnt > 0)
+            imm.vm = 0;
       }
    }
 
@@ -806,10 +850,10 @@ void gen(Instruction* instr, wait_ctx& ctx)
          insert_wait_entry(ctx, instr->operands[3], event_vmem_gpr_lock);
       } else if (ctx.chip_class == GFX6 &&
                  instr->format == Format::MIMG &&
-                 instr->operands[1].regClass().type() == RegType::vgpr) {
+                 instr->operands.size() >= 4) {
          ctx.exp_cnt++;
          update_counters(ctx, event_vmem_gpr_lock);
-         insert_wait_entry(ctx, instr->operands[1], event_vmem_gpr_lock);
+         insert_wait_entry(ctx, instr->operands[3], event_vmem_gpr_lock);
       }
 
       break;

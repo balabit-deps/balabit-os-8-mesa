@@ -50,10 +50,16 @@ struct blorp_params;
 #define IRIS_MAX_SSBOS 16
 #define IRIS_MAX_VIEWPORTS 16
 #define IRIS_MAX_CLIP_PLANES 8
+#define IRIS_MAX_GLOBAL_BINDINGS 32
 
 enum iris_param_domain {
    BRW_PARAM_DOMAIN_BUILTIN = 0,
    BRW_PARAM_DOMAIN_IMAGE,
+};
+
+enum iris_shader_reloc {
+   IRIS_SHADER_RELOC_CONST_DATA_ADDR_LOW,
+   IRIS_SHADER_RELOC_CONST_DATA_ADDR_HIGH,
 };
 
 enum {
@@ -378,11 +384,11 @@ struct iris_uncompiled_shader {
    /* Whether shader uses atomic operations. */
    bool uses_atomic_load_store;
 
-   /** Constant data scraped from the shader by nir_opt_large_constants */
-   struct pipe_resource *const_data;
+   /** Size (in bytes) of the kernel input data */
+   unsigned kernel_input_size;
 
-   /** Surface state for const_data */
-   struct iris_state_ref const_data_state;
+   /** Size (in bytes) of the local (shared) data passed as kernel inputs */
+   unsigned kernel_shared_size;
 };
 
 enum iris_surface_group {
@@ -437,6 +443,9 @@ struct iris_compiled_shader {
    /** A list of system values to be uploaded as uniforms. */
    enum brw_param_builtin *system_values;
    unsigned num_system_values;
+
+   /** Size (in bytes) of the kernel input data */
+   unsigned kernel_input_size;
 
    /** Number of constbufs expected by the shader. */
    unsigned num_cbufs;
@@ -618,11 +627,6 @@ struct iris_context {
       struct iris_bo *scratch_bos[1 << 4][MESA_SHADER_STAGES];
    } shaders;
 
-   struct {
-      struct iris_query *query;
-      bool condition;
-   } condition;
-
    struct gen_perf_context *perf_ctx;
 
    /** Frame number for debug prints */
@@ -700,6 +704,9 @@ struct iris_context {
 
       /** Do any samplers need border color?  One bit per shader stage. */
       uint8_t need_border_colors;
+
+      /** Global resource bindings */
+      struct pipe_resource *global_bindings[IRIS_MAX_GLOBAL_BINDINGS];
 
       struct pipe_stream_output_target *so_target[PIPE_MAX_SO_BUFFERS];
       bool streamout_active;
@@ -810,7 +817,10 @@ void iris_copy_region(struct blorp_context *blorp,
 
 /* iris_draw.c */
 
-void iris_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info);
+void iris_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info,
+                   const struct pipe_draw_indirect_info *indirect,
+                   const struct pipe_draw_start_count *draws,
+                   unsigned num_draws);
 void iris_launch_grid(struct pipe_context *, const struct pipe_grid_info *);
 
 /* iris_pipe_control.c */
@@ -846,7 +856,7 @@ uint32_t iris_upload_border_color(struct iris_context *ice,
 void iris_upload_ubo_ssbo_surf_state(struct iris_context *ice,
                                      struct pipe_shader_buffer *buf,
                                      struct iris_state_ref *surf_state,
-                                     bool ssbo);
+                                     isl_surf_usage_flags_t usage);
 const struct shader_info *iris_get_shader_info(const struct iris_context *ice,
                                                gl_shader_stage stage);
 struct iris_bo *iris_get_scratch_space(struct iris_context *ice,
@@ -890,6 +900,7 @@ struct iris_compiled_shader *iris_upload_shader(struct iris_context *ice,
                                                 uint32_t *streamout,
                                                 enum brw_param_builtin *sysv,
                                                 unsigned num_system_values,
+                                                unsigned kernel_input_size,
                                                 unsigned num_cbufs,
                                                 const struct iris_binding_table *bt);
 const void *iris_find_previous_compile(const struct iris_context *ice,
@@ -963,13 +974,13 @@ void gen9_toggle_preemption(struct iris_context *ice,
 #  define genX(x) gen9_##x
 #  include "iris_genx_protos.h"
 #  undef genX
-#  define genX(x) gen10_##x
-#  include "iris_genx_protos.h"
-#  undef genX
 #  define genX(x) gen11_##x
 #  include "iris_genx_protos.h"
 #  undef genX
 #  define genX(x) gen12_##x
+#  include "iris_genx_protos.h"
+#  undef genX
+#  define genX(x) gen125_##x
 #  include "iris_genx_protos.h"
 #  undef genX
 #endif

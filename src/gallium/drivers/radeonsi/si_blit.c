@@ -586,9 +586,10 @@ static void si_check_render_feedback_texture(struct si_context *sctx, struct si_
       si_texture_disable_dcc(sctx, tex);
 }
 
-static void si_check_render_feedback_textures(struct si_context *sctx, struct si_samplers *textures)
+static void si_check_render_feedback_textures(struct si_context *sctx, struct si_samplers *textures,
+                                              uint32_t in_use_mask)
 {
-   uint32_t mask = textures->enabled_mask;
+   uint32_t mask = textures->enabled_mask & in_use_mask;
 
    while (mask) {
       const struct pipe_sampler_view *view;
@@ -607,9 +608,10 @@ static void si_check_render_feedback_textures(struct si_context *sctx, struct si
    }
 }
 
-static void si_check_render_feedback_images(struct si_context *sctx, struct si_images *images)
+static void si_check_render_feedback_images(struct si_context *sctx, struct si_images *images,
+                                            uint32_t in_use_mask)
 {
-   uint32_t mask = images->enabled_mask;
+   uint32_t mask = images->enabled_mask & in_use_mask;
 
    while (mask) {
       const struct pipe_image_view *view;
@@ -673,9 +675,23 @@ static void si_check_render_feedback(struct si_context *sctx)
    if (!si_get_total_colormask(sctx))
       return;
 
-   for (int i = 0; i < SI_NUM_SHADERS; ++i) {
-      si_check_render_feedback_images(sctx, &sctx->images[i]);
-      si_check_render_feedback_textures(sctx, &sctx->samplers[i]);
+   struct si_shader_ctx_state *shaders[SI_NUM_SHADERS] = {
+      [PIPE_SHADER_VERTEX] = &sctx->vs_shader,
+      [PIPE_SHADER_TESS_CTRL] = &sctx->tcs_shader,
+      [PIPE_SHADER_TESS_EVAL] = &sctx->tes_shader,
+      [PIPE_SHADER_GEOMETRY] = &sctx->gs_shader,
+      [PIPE_SHADER_FRAGMENT] = &sctx->ps_shader,
+   };
+
+   for (int i = 0; i < SI_NUM_GRAPHICS_SHADERS; ++i) {
+      if (!shaders[i]->cso)
+         continue;
+
+      struct si_shader_info *info = &shaders[i]->cso->info;
+      si_check_render_feedback_images(sctx, &sctx->images[i],
+                                      u_bit_consecutive(0, info->base.num_images));
+      si_check_render_feedback_textures(sctx, &sctx->samplers[i],
+                                        info->base.textures_used);
    }
 
    si_check_render_feedback_resident_images(sctx);
@@ -972,7 +988,6 @@ void si_resource_copy_region(struct pipe_context *ctx, struct pipe_resource *dst
 
    /* SNORM8 blitting has precision issues on some chips. Use the SINT
     * equivalent instead, which doesn't force DCC decompression.
-    * Note that some chips avoid this issue by using SDMA.
     */
    if (util_format_is_snorm8(dst_templ.format)) {
       dst_templ.format = src_templ.format = util_format_snorm8_to_sint8(dst_templ.format);
@@ -1102,7 +1117,7 @@ resolve_to_temp:
    templ.usage = PIPE_USAGE_DEFAULT;
    templ.flags = SI_RESOURCE_FLAG_FORCE_MSAA_TILING | SI_RESOURCE_FLAG_FORCE_MICRO_TILE_MODE |
                  SI_RESOURCE_FLAG_MICRO_TILE_MODE_SET(src->surface.micro_tile_mode) |
-                 SI_RESOURCE_FLAG_DISABLE_DCC;
+                 SI_RESOURCE_FLAG_DISABLE_DCC | SI_RESOURCE_FLAG_DRIVER_INTERNAL;
 
    /* The src and dst microtile modes must be the same. */
    if (sctx->chip_class <= GFX8 && src->surface.micro_tile_mode == RADEON_MICRO_MODE_DISPLAY)
@@ -1137,21 +1152,18 @@ resolve_to_temp:
 static void si_blit(struct pipe_context *ctx, const struct pipe_blit_info *info)
 {
    struct si_context *sctx = (struct si_context *)ctx;
-   struct si_texture *dst = (struct si_texture *)info->dst.resource;
 
    if (do_hardware_msaa_resolve(ctx, info)) {
       return;
    }
 
-   /* Using SDMA for copying to a linear texture in GTT is much faster.
-    * This improves DRI PRIME performance.
-    *
-    * resource_copy_region can't do this yet, because dma_copy calls it
-    * on failure (recursion).
+   /* Using compute for copying to a linear texture in GTT is much faster than
+    * going through RBs (render backends). This improves DRI PRIME performance.
     */
-   if (dst->surface.is_linear && util_can_blit_via_copy_region(info, false)) {
-      sctx->dma_copy(ctx, info->dst.resource, info->dst.level, info->dst.box.x, info->dst.box.y,
-                     info->dst.box.z, info->src.resource, info->src.level, &info->src.box);
+   if (util_can_blit_via_copy_region(info, false)) {
+      si_resource_copy_region(ctx, info->dst.resource, info->dst.level,
+                              info->dst.box.x, info->dst.box.y, info->dst.box.z,
+                              info->src.resource, info->src.level, &info->src.box);
       return;
    }
 
@@ -1165,9 +1177,6 @@ static void si_blit(struct pipe_context *ctx, const struct pipe_blit_info *info)
                                          info->dst.format);
    si_decompress_subresource(ctx, info->src.resource, PIPE_MASK_RGBAZS, info->src.level,
                              info->src.box.z, info->src.box.z + info->src.box.depth - 1);
-
-   if (sctx->screen->debug_flags & DBG(FORCE_SDMA) && util_try_blit_via_copy_region(ctx, info))
-      return;
 
    si_blitter_begin(sctx, SI_BLIT | (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
    util_blitter_blit(sctx->blitter, info);
@@ -1256,6 +1265,15 @@ static void si_flush_resource(struct pipe_context *ctx, struct pipe_resource *re
          vi_separate_dcc_process_and_reset_stats(ctx, tex);
       }
    }
+}
+
+void si_flush_implicit_resources(struct si_context *sctx)
+{
+   hash_table_foreach(sctx->dirty_implicit_resources, entry) {
+      si_flush_resource(&sctx->b, entry->data);
+      pipe_resource_reference((struct pipe_resource **)&entry->data, NULL);
+   }
+   _mesa_hash_table_clear(sctx->dirty_implicit_resources, NULL);
 }
 
 void si_decompress_dcc(struct si_context *sctx, struct si_texture *tex)

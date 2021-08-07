@@ -121,6 +121,9 @@ i915_get_shader_param(struct pipe_screen *screen,
             return PIPE_MAX_SAMPLERS;
          else
             return 0;
+      case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+      case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
+         return 0;
        default:
          return draw_get_shader_param(shader, cap);
       }
@@ -449,6 +452,7 @@ i915_fence_finish(struct pipe_screen *screen,
 
 static void
 i915_flush_frontbuffer(struct pipe_screen *screen,
+                       struct pipe_context *pipe,
                        struct pipe_resource *resource,
                        unsigned level, unsigned layer,
                        void *winsys_drawable_handle,
@@ -456,6 +460,7 @@ i915_flush_frontbuffer(struct pipe_screen *screen,
 {
    /* XXX: Dummy right now. */
    (void)screen;
+   (void)pipe;
    (void)resource;
    (void)level;
    (void)layer;

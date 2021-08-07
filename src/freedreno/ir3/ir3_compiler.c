@@ -56,6 +56,7 @@ enum ir3_shader_debug ir3_shader_debug = 0;
 void
 ir3_compiler_destroy(struct ir3_compiler *compiler)
 {
+	disk_cache_destroy(compiler->disk_cache);
 	ralloc_free(compiler);
 }
 
@@ -93,6 +94,12 @@ ir3_compiler_create(struct fd_device *dev, uint32_t gpu_id)
 		 * TODO: is this true on earlier gen's?
 		 */
 		compiler->max_const_compute = 256;
+
+		/* TODO: implement clip+cull distances on earlier gen's */
+		compiler->has_clip_cull = true;
+
+		/* TODO: implement private memory on earlier gen's */
+		compiler->has_pvtmem = true;
 
 		if (compiler->gpu_id == 650)
 			compiler->tess_use_shared = true;

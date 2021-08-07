@@ -39,6 +39,7 @@
 
 #include "pipe/p_defines.h"
 #include "pipe/p_state.h"
+#include "util/compiler.h"
 #include "util/u_blitter.h"
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
@@ -78,13 +79,13 @@ etna_clear_blit_pack_rgba(enum pipe_format format, const union pipe_color_union 
    switch (util_format_get_blocksize(format)) {
    case 1:
       uc.ui[0] = uc.ui[0] << 8 | (uc.ui[0] & 0xff);
-      /* fallthrough */
+      FALLTHROUGH;
    case 2:
       uc.ui[0] =  uc.ui[0] << 16 | (uc.ui[0] & 0xffff);
-      /* fallthrough */
+      FALLTHROUGH;
    case 4:
       uc.ui[1] = uc.ui[0];
-      /* fallthrough */
+      FALLTHROUGH;
    default:
       return (uint64_t) uc.ui[1] << 32 | uc.ui[0];
    }
@@ -164,7 +165,8 @@ etna_resource_copy_region(struct pipe_context *pctx, struct pipe_resource *dst,
     * to non-aligned: can fall back to rendering-based copy?
     * XXX this goes wrong when source surface is supertiled.
     */
-   if (util_blitter_is_copy_supported(ctx->blitter, dst, src)) {
+   if (src->target != PIPE_BUFFER && dst->target != PIPE_BUFFER &&
+       util_blitter_is_copy_supported(ctx->blitter, dst, src)) {
       etna_blit_save_state(ctx);
       util_blitter_copy_texture(ctx->blitter, dst, dst_level, dstx, dsty, dstz,
                                 src, src_level, src_box);

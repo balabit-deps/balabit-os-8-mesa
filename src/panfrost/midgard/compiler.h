@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2019-2020 Collabora, Ltd.
  * Copyright (C) 2019 Alyssa Rosenzweig <alyssa@rosenzweig.io>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -71,10 +72,6 @@ typedef struct midgard_branch {
         };
 } midgard_branch;
 
-#define PAN_WRITEOUT_C 1
-#define PAN_WRITEOUT_Z 2
-#define PAN_WRITEOUT_S 4
-
 /* Generic in-memory data type repesenting a single logical instruction, rather
  * than a single instruction group. This is the preferred form for code gen.
  * Multiple midgard_insturctions will later be combined during scheduling,
@@ -140,7 +137,6 @@ typedef struct midgard_instruction {
         bool has_constants;
         midgard_constants constants;
         uint16_t inline_constant;
-        bool has_blend_constant;
         bool has_inline_constant;
 
         bool compact_branch;
@@ -221,7 +217,6 @@ typedef struct midgard_bundle {
         int control;
         bool has_embedded_constants;
         midgard_constants constants;
-        bool has_blend_constant;
         bool last_writeout;
 } midgard_bundle;
 
@@ -238,6 +233,8 @@ enum midgard_rt_id {
         MIDGARD_NUM_RTS,
 };
 
+#define MIDGARD_MAX_SAMPLE_ITER 16
+
 typedef struct compiler_context {
         nir_shader *nir;
         gl_shader_stage stage;
@@ -248,14 +245,17 @@ typedef struct compiler_context {
         /* Render target number for a keyed blend shader. Depends on is_blend */
         unsigned blend_rt;
 
+        /* Number of samples for a keyed blend shader. Depends on is_blend */
+        unsigned blend_sample_iterations;
+
         /* Index to precolour to r0 for an input blend colour */
         unsigned blend_input;
 
         /* Index to precolour to r2 for a dual-source blend colour */
         unsigned blend_src1;
 
-        /* Tracking for blend constant patching */
-        int blend_constant_offset;
+        /* Blend constants */
+        float blend_constants[4];
 
         /* Number of bytes used for Thread Local Storage */
         unsigned tls_size;
@@ -309,9 +309,6 @@ typedef struct compiler_context {
         /* Count of instructions emitted from NIR overall, across all blocks */
         int instruction_count;
 
-        /* Alpha ref value passed in */
-        float alpha_ref;
-
         unsigned quadword_count;
 
         /* Bitmask of valid metadata */
@@ -321,7 +318,7 @@ typedef struct compiler_context {
         uint32_t quirks;
 
         /* Writeout instructions for each render target */
-        midgard_instruction *writeout_branch[MIDGARD_NUM_RTS];
+        midgard_instruction *writeout_branch[MIDGARD_NUM_RTS][MIDGARD_MAX_SAMPLE_ITER];
 
         struct panfrost_sysvals sysvals;
 } compiler_context;
@@ -536,7 +533,11 @@ void mir_insert_instruction_after_scheduled(compiler_context *ctx, midgard_block
 void mir_flip(midgard_instruction *ins);
 void mir_compute_temp_count(compiler_context *ctx);
 
-void mir_set_offset(compiler_context *ctx, midgard_instruction *ins, nir_src *offset, bool is_shared);
+#define LDST_GLOBAL 0x3E
+#define LDST_SHARED 0x2E
+#define LDST_SCRATCH 0x2A
+
+void mir_set_offset(compiler_context *ctx, midgard_instruction *ins, nir_src *offset, unsigned seg);
 
 /* 'Intrinsic' move for aliasing */
 
@@ -664,11 +665,9 @@ void emit_binary_bundle(
         struct util_dynarray *emission,
         int next_tag);
 
-bool
-nir_undef_to_zero(nir_shader *shader);
 bool nir_fuse_io_16(nir_shader *shader);
 
-void midgard_nir_lod_errata(nir_shader *shader);
+bool midgard_nir_lod_errata(nir_shader *shader);
 
 unsigned midgard_get_first_tag_from_block(compiler_context *ctx, unsigned block_idx);
 
