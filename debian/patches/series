@@ -6,3 +6,6 @@ clover-fix-build-with-llvm-12.diff
 iris-avoid-abort-if-enomem.diff
 amd-add-missing-line-from-backport.diff
 0001-Cherry-pick-upstream-commits-to-fix-the-distored-dis.diff
+0001-intel-dev-identify-alderlake.patch
+0002-intel-isl-Add-Wa_22011186057-to-disable-CCS-on-ADL-G.patch
+0003-intel-dev-Add-device-info-for-ADL-GT2.patch

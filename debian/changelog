@@ -1,3 +1,9 @@
+mesa (21.0.3-0ubuntu0.3~20.04.2) focal; urgency=medium
+
+  * Backport support for ADL-P. (LP: #1940504)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 25 Aug 2021 15:41:24 +0300
+
 mesa (21.0.3-0ubuntu0.3~20.04.1) focal; urgency=medium
 
   * 0001-Cherry-pick-upstream-commits-to-fix-the-distored-dis.diff:
