@@ -1,0 +1,31 @@
+From f56280ea6196c02ec90b4ce738785c18e8e667e6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Marek=20Ol=C5=A1=C3=A1k?= <marek.olsak@amd.com>
+Date: Tue, 26 Jan 2021 17:34:37 -0500
+Subject: [PATCH 3/5] amd: sort chip enums based on hw revision
+
+A future commit will depend on this.
+
+Reviewed-by: Bas Nieuwenhuizen <bas@basnieuwenhuizen.nl>
+Reviewed-by: Pierre-Eric Pelloux-Prayer <pierre-eric.pelloux-prayer@amd.com>
+Part-of: <https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/8892>
+---
+ src/amd/common/amd_family.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/amd/common/amd_family.h b/src/amd/common/amd_family.h
+index a6175e8b4fd..131730837e2 100644
+--- a/src/amd/common/amd_family.h
++++ b/src/amd/common/amd_family.h
+@@ -105,8 +105,8 @@ enum radeon_family
+    CHIP_NAVI14,
+    CHIP_SIENNA_CICHLID,
+    CHIP_NAVY_FLOUNDER,
+-   CHIP_DIMGREY_CAVEFISH,
+    CHIP_VANGOGH,
++   CHIP_DIMGREY_CAVEFISH,
+    CHIP_LAST,
+ };
+ 
+-- 
+2.32.0
+

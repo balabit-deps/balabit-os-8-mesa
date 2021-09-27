@@ -9,3 +9,8 @@ amd-add-missing-line-from-backport.diff
 0001-intel-dev-identify-alderlake.patch
 0002-intel-isl-Add-Wa_22011186057-to-disable-CCS-on-ADL-G.patch
 0003-intel-dev-Add-device-info-for-ADL-GT2.patch
+0001-ac-Add-has_zero_index_buffer_bug-to-ac_gpu_info.patch
+0002-ac-add-ac_gpu_info-has_image_load_dcc_bug.patch
+0003-amd-sort-chip-enums-based-on-hw-revision.patch
+0004-ac-add-ac_get_family_name-helper.patch
+0005-amd-add-Yellow-Carp-support.patch

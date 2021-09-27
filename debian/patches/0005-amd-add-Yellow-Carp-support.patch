@@ -1,0 +1,206 @@
+From 8af896dc21b089bce53003aa8d0d7e37f23e2d83 Mon Sep 17 00:00:00 2001
+From: Aaron Liu <aaron.liu@amd.com>
+Date: Thu, 17 Sep 2020 16:03:15 +0800
+Subject: [PATCH 5/5] amd: add Yellow Carp support
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Signed-off-by: Aaron Liu <aaron.liu@amd.com>
+Signed-off-by: Marek Olšák <marek.olsak@amd.com>
+Acked-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+Part-of: <https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/10878>
+
+backported for 21.0.x: drop check for CHIP_ALDEBARAN
+---
+ src/amd/addrlib/src/amdgpu_asic_addr.h      |  6 ++++++
+ src/amd/addrlib/src/core/addrlib.cpp        |  1 +
+ src/amd/addrlib/src/gfx10/gfx10addrlib.cpp  | 14 ++++++++++++++
+ src/amd/common/ac_gpu_info.c                |  7 ++++++-
+ src/amd/common/amd_family.c                 |  4 ++--
+ src/amd/common/amd_family.h                 |  1 +
+ src/amd/llvm/ac_llvm_util.c                 |  1 +
+ src/gallium/drivers/radeon/radeon_vcn_dec.c |  1 +
+ src/gallium/drivers/radeonsi/si_get.c       |  3 +++
+ 9 files changed, 35 insertions(+), 3 deletions(-)
+
+diff --git a/src/amd/addrlib/src/amdgpu_asic_addr.h b/src/amd/addrlib/src/amdgpu_asic_addr.h
+index 02b241e4fdb..87ae8b5930a 100644
+--- a/src/amd/addrlib/src/amdgpu_asic_addr.h
++++ b/src/amd/addrlib/src/amdgpu_asic_addr.h
+@@ -45,6 +45,7 @@
+ #define FAMILY_RV      0x8E
+ #define FAMILY_NV      0x8F
+ #define FAMILY_VGH     0x90
++#define FAMILY_YC      0x92
+ 
+ // AMDGPU_FAMILY_IS(familyId, familyName)
+ #define FAMILY_IS(f, fn)     (f == FAMILY_##fn)
+@@ -58,6 +59,7 @@
+ #define FAMILY_IS_AI(f)      FAMILY_IS(f, AI)
+ #define FAMILY_IS_RV(f)      FAMILY_IS(f, RV)
+ #define FAMILY_IS_NV(f)      FAMILY_IS(f, NV)
++#define FAMILY_IS_YC(f)      FAMILY_IS(f, YC)
+ 
+ #define AMDGPU_UNKNOWN          0xFF
+ 
+@@ -104,6 +106,8 @@
+ 
+ #define AMDGPU_VANGOGH_RANGE    0x01, 0xFF
+ 
++#define AMDGPU_YELLOW_CARP_RANGE 0x01, 0xFF
++
+ #define AMDGPU_EXPAND_FIX(x) x
+ #define AMDGPU_RANGE_HELPER(val, min, max) ((val >= min) && (val < max))
+ #define AMDGPU_IN_RANGE(val, ...)   AMDGPU_EXPAND_FIX(AMDGPU_RANGE_HELPER(val, __VA_ARGS__))
+@@ -157,4 +161,6 @@
+ 
+ #define ASICREV_IS_VANGOGH(r)          ASICREV_IS(r, VANGOGH)
+ 
++#define ASICREV_IS_YELLOW_CARP(r)      ASICREV_IS(r, YELLOW_CARP)
++
+ #endif // _AMDGPU_ASIC_ADDR_H
+diff --git a/src/amd/addrlib/src/core/addrlib.cpp b/src/amd/addrlib/src/core/addrlib.cpp
+index 5e6c819c1a6..0318447c452 100644
+--- a/src/amd/addrlib/src/core/addrlib.cpp
++++ b/src/amd/addrlib/src/core/addrlib.cpp
+@@ -228,6 +228,7 @@ ADDR_E_RETURNCODE Lib::Create(
+                         break;
+                     case FAMILY_NV:
+                     case FAMILY_VGH:
++                    case FAMILY_YC:
+                         pLib = Gfx10HwlInit(&client);
+                         break;
+                     default:
+diff --git a/src/amd/addrlib/src/gfx10/gfx10addrlib.cpp b/src/amd/addrlib/src/gfx10/gfx10addrlib.cpp
+index a29f848d83a..f3af9433a12 100644
+--- a/src/amd/addrlib/src/gfx10/gfx10addrlib.cpp
++++ b/src/amd/addrlib/src/gfx10/gfx10addrlib.cpp
+@@ -980,6 +980,20 @@ ChipFamily Gfx10Lib::HwlConvertChipFamily(
+             {
+                 ADDR_ASSERT(!"Unknown chip revision");
+             }
++
++            break;
++
++        case FAMILY_YC:
++            if (ASICREV_IS_YELLOW_CARP(chipRevision))
++            {
++                m_settings.supportRbPlus   = 1;
++                m_settings.dccUnsup3DSwDis = 0;
++            }
++            else
++            {
++                ADDR_ASSERT(!"Unknown chip revision");
++            }
++
+             break;
+ 
+         default:
+diff --git a/src/amd/common/ac_gpu_info.c b/src/amd/common/ac_gpu_info.c
+index 31789b53190..3ed53aa354c 100644
+--- a/src/amd/common/ac_gpu_info.c
++++ b/src/amd/common/ac_gpu_info.c
+@@ -578,6 +578,9 @@ bool ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
+    case FAMILY_VGH:
+       identify_chip(VANGOGH);
+       break;
++   case FAMILY_YC:
++      identify_chip(YELLOW_CARP);
++      break;
+    }
+ 
+    if (!info->name) {
+@@ -805,7 +808,8 @@ bool ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
+     * DCC is enabled (ie. WRITE_COMPRESS_ENABLE should be 0).
+     */
+    info->has_image_load_dcc_bug = info->family == CHIP_DIMGREY_CAVEFISH ||
+-                                  info->family == CHIP_VANGOGH;
++                                  info->family == CHIP_VANGOGH ||
++                                  info->family == CHIP_YELLOW_CARP;
+ 
+    /* Support for GFX10.3 was added with F32_ME_FEATURE_VERSION_31 but the
+     * firmware version wasn't bumped.
+@@ -920,6 +924,7 @@ bool ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
+          pc_lines = 512;
+          break;
+       case CHIP_VANGOGH:
++      case CHIP_YELLOW_CARP:
+          pc_lines = 256;
+          break;
+       case CHIP_ARCTURUS:
+diff --git a/src/amd/common/amd_family.c b/src/amd/common/amd_family.c
+index 801cce1dbe2..edbe8234d11 100644
+--- a/src/amd/common/amd_family.c
++++ b/src/amd/common/amd_family.c
+@@ -80,8 +80,6 @@ const char *ac_get_family_name(enum radeon_family family)
+       return "renoir";
+    case CHIP_ARCTURUS:
+       return "arcturus";
+-   case CHIP_ALDEBARAN:
+-      return "aldebaran";
+    case CHIP_NAVI10:
+       return "navi10";
+    case CHIP_NAVI12:
+@@ -96,6 +94,8 @@ const char *ac_get_family_name(enum radeon_family family)
+       return "dimgrey_cavefish";
+    case CHIP_VANGOGH:
+       return "vangogh";
++   case CHIP_YELLOW_CARP:
++      return "yellow_carp";
+    default:
+       unreachable("Unknown GPU family");
+    }
+diff --git a/src/amd/common/amd_family.h b/src/amd/common/amd_family.h
+index 99d53f55990..8a63a241ef9 100644
+--- a/src/amd/common/amd_family.h
++++ b/src/amd/common/amd_family.h
+@@ -111,6 +111,7 @@ enum radeon_family
+    CHIP_NAVY_FLOUNDER,
+    CHIP_VANGOGH,
+    CHIP_DIMGREY_CAVEFISH,
++   CHIP_YELLOW_CARP,
+    CHIP_LAST,
+ };
+ 
+diff --git a/src/amd/llvm/ac_llvm_util.c b/src/amd/llvm/ac_llvm_util.c
+index bac6c1d65e8..612bc996062 100644
+--- a/src/amd/llvm/ac_llvm_util.c
++++ b/src/amd/llvm/ac_llvm_util.c
+@@ -178,6 +178,7 @@ const char *ac_get_llvm_processor_name(enum radeon_family family)
+    case CHIP_NAVY_FLOUNDER:
+    case CHIP_DIMGREY_CAVEFISH:
+    case CHIP_VANGOGH:
++   case CHIP_YELLOW_CARP:
+       return "gfx1030";
+    default:
+       return "";
+diff --git a/src/gallium/drivers/radeon/radeon_vcn_dec.c b/src/gallium/drivers/radeon/radeon_vcn_dec.c
+index 8a16ea7a092..5f6bc67f8e5 100644
+--- a/src/gallium/drivers/radeon/radeon_vcn_dec.c
++++ b/src/gallium/drivers/radeon/radeon_vcn_dec.c
+@@ -2269,6 +2269,7 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
+    case CHIP_NAVY_FLOUNDER:
+    case CHIP_DIMGREY_CAVEFISH:
+    case CHIP_VANGOGH:
++   case CHIP_YELLOW_CARP:
+       dec->reg.data0 = RDECODE_VCN2_5_GPCOM_VCPU_DATA0;
+       dec->reg.data1 = RDECODE_VCN2_5_GPCOM_VCPU_DATA1;
+       dec->reg.cmd = RDECODE_VCN2_5_GPCOM_VCPU_CMD;
+diff --git a/src/gallium/drivers/radeonsi/si_get.c b/src/gallium/drivers/radeonsi/si_get.c
+index 5944bef76d2..80b3ff8315e 100644
+--- a/src/gallium/drivers/radeonsi/si_get.c
++++ b/src/gallium/drivers/radeonsi/si_get.c
+@@ -532,6 +532,9 @@ static int si_get_video_param(struct pipe_screen *screen, enum pipe_video_profil
+ 
+    switch (param) {
+    case PIPE_VIDEO_CAP_SUPPORTED:
++      if (codec < PIPE_VIDEO_FORMAT_MPEG4_AVC &&
++          sscreen->info.family >= CHIP_YELLOW_CARP)
++         return false;
+       switch (codec) {
+       case PIPE_VIDEO_FORMAT_MPEG12:
+          return profile != PIPE_VIDEO_PROFILE_MPEG1;
+-- 
+2.32.0
+

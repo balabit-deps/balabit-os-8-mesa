@@ -1,3 +1,9 @@
+mesa (21.0.3-0ubuntu0.3~20.04.3) focal; urgency=medium
+
+  * patches: Backport support for AMD Yellow Carp. (LP: #1945227)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 27 Sep 2021 20:48:12 +0300
+
 mesa (21.0.3-0ubuntu0.3~20.04.2) focal; urgency=medium
 
   * Backport support for ADL-P. (LP: #1940504)
