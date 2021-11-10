@@ -1,0 +1,39 @@
+From 7ff30a0499bd872d77b0f377414bbc03463b9f87 Mon Sep 17 00:00:00 2001
+From: Lepton Wu <lepton@chromium.org>
+Date: Fri, 23 Jul 2021 21:27:00 -0700
+Subject: [PATCH] gallium: Reset {d,r}Priv in dri_unbind_context
+
+The code in dri_make_current just checks the value of the pointers
+to decide to update texture_stamp or not. This is buggy since a new
+allocated drawable could share the same address with the previous
+released drawable. Fix the stale pointer issue by always resetting
+these pointers to NULL in dri_unbind_context.
+
+v2:
+   Move the reset codes to the end of the function.
+
+Signed-off-by: Lepton Wu <lepton@chromium.org>
+Cc: mesa-stable
+Reviewed-by: Adam Jackson <ajax@redhat.com>
+Reviewed-by: Emil Velikov <emil.l.velikov@gmail.com>
+Part-of: <https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/12050>
+---
+ src/gallium/frontends/dri/dri_context.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/gallium/frontends/dri/dri_context.c b/src/gallium/frontends/dri/dri_context.c
+index 39eae5f7587..55bfa224bcf 100644
+--- a/src/gallium/frontends/dri/dri_context.c
++++ b/src/gallium/frontends/dri/dri_context.c
+@@ -271,6 +271,8 @@ dri_unbind_context(__DRIcontext * cPriv)
+          stapi->make_current(stapi, NULL, NULL, NULL);
+       }
+    }
++   ctx->dPriv = NULL;
++   ctx->rPriv = NULL;
+ 
+    return GL_TRUE;
+ }
+-- 
+2.32.0
+

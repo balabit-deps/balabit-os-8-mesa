@@ -14,3 +14,4 @@ amd-add-missing-line-from-backport.diff
 0003-amd-sort-chip-enums-based-on-hw-revision.patch
 0004-ac-add-ac_get_family_name-helper.patch
 0005-amd-add-Yellow-Carp-support.patch
+gallium-Reset-d-r-Priv-in-dri_unbind_context.patch
