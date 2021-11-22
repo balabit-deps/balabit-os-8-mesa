@@ -1,3 +1,9 @@
+mesa (21.0.3-0ubuntu0.3~20.04.5) focal; urgency=medium
+
+  * Add support for AMD Beige Goby. (LP: #1952083)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 22 Nov 2021 10:23:04 +0200
+
 mesa (21.0.3-0ubuntu0.3~20.04.4) focal; urgency=medium
 
   * gallium-Reset-d-r-Priv-in-dri_unbind_context.patch: Fix chromium

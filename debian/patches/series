@@ -15,3 +15,4 @@ amd-add-missing-line-from-backport.diff
 0004-ac-add-ac_get_family_name-helper.patch
 0005-amd-add-Yellow-Carp-support.patch
 gallium-Reset-d-r-Priv-in-dri_unbind_context.patch
+0001-amd-add-Beige-Goby-support.patch
