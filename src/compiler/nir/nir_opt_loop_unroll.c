@@ -654,7 +654,7 @@ remove_out_of_bounds_induction_use(nir_shader *shader, nir_loop *loop,
                      nir_ssa_undef(&b, intrin->dest.ssa.num_components,
                                    intrin->dest.ssa.bit_size);
                   nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
-                                           nir_src_for_ssa(undef));
+                                           undef);
                } else {
                   nir_instr_remove(instr);
                   continue;
@@ -757,11 +757,13 @@ is_indirect_load(nir_instr *instr)
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
       if ((intrin->intrinsic == nir_intrinsic_load_ubo ||
-           intrin->intrinsic == nir_intrinsic_load_ssbo ||
-           intrin->intrinsic == nir_intrinsic_load_global) &&
+           intrin->intrinsic == nir_intrinsic_load_ssbo) &&
           !nir_src_is_const(intrin->src[1])) {
          return true;
       }
+
+      if (intrin->intrinsic == nir_intrinsic_load_global)
+         return true;
 
       if (intrin->intrinsic == nir_intrinsic_load_deref ||
           intrin->intrinsic == nir_intrinsic_store_deref) {
@@ -974,7 +976,27 @@ process_loops(nir_shader *sh, nir_cf_node *cf_node, bool *has_nested_loop_out,
          }
       }
 
-      if (has_nested_loop || !loop->info->limiting_terminator)
+      /* Intentionally don't consider exact_trip_count_known here.  When
+       * max_trip_count is non-zero, it is the upper bound on the number of
+       * times the loop will iterate, but the loop may iterate less.  For
+       * example, the following loop will iterate 0 or 1 time:
+       *
+       *    for (i = 0; i < min(x, 1); i++) { ... }
+       *
+       * Trivial single-interation loops (e.g., do { ... } while (false)) and
+       * trivial zero-iteration loops (e.g., while (false) { ... }) will have
+       * already been handled.
+       *
+       * If the loop is known to execute at most once and meets the other
+       * unrolling criteria, unroll it even if it has nested loops.
+       *
+       * It is unlikely that such loops exist in real shaders. GraphicsFuzz is
+       * known to generate spurious loops that iterate exactly once.  It is
+       * plausible that it could eventually start generating loops like the
+       * example above, so it seems logical to defend against it now.
+       */
+      if (!loop->info->limiting_terminator ||
+          (loop->info->max_trip_count != 1 && has_nested_loop))
          goto exit;
 
       if (!check_unrolling_restrictions(sh, loop))

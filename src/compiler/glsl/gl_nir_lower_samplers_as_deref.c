@@ -231,14 +231,13 @@ record_textures_used(struct shader_info *info,
    /* Structs have been lowered already, so get_aoa_size is sufficient. */
    const unsigned size =
       glsl_type_is_array(var->type) ? glsl_get_aoa_size(var->type) : 1;
-   unsigned mask = ((1ull << MAX2(size, 1)) - 1) << var->data.binding;
 
-   info->textures_used |= mask;
+   BITSET_SET_RANGE(info->textures_used, var->data.binding, var->data.binding + (MAX2(size, 1) - 1));
 
    if (op == nir_texop_txf ||
        op == nir_texop_txf_ms ||
        op == nir_texop_txf_ms_mcs)
-      info->textures_used_by_txf |= mask;
+      BITSET_SET_RANGE(info->textures_used_by_txf, var->data.binding, var->data.binding + (MAX2(size, 1) - 1));
 }
 
 static bool
@@ -297,7 +296,8 @@ lower_intrinsic(nir_intrinsic_instr *instr,
        instr->intrinsic == nir_intrinsic_image_deref_atomic_exchange ||
        instr->intrinsic == nir_intrinsic_image_deref_atomic_comp_swap ||
        instr->intrinsic == nir_intrinsic_image_deref_atomic_fadd ||
-       instr->intrinsic == nir_intrinsic_image_deref_size) {
+       instr->intrinsic == nir_intrinsic_image_deref_size ||
+       instr->intrinsic == nir_intrinsic_image_deref_samples) {
 
       b->cursor = nir_before_instr(&instr->instr);
       nir_deref_instr *deref =
@@ -312,6 +312,9 @@ lower_intrinsic(nir_intrinsic_instr *instr,
                             nir_src_for_ssa(&deref->dest.ssa));
       return true;
    }
+   if (instr->intrinsic == nir_intrinsic_image_deref_order ||
+       instr->intrinsic == nir_intrinsic_image_deref_format)
+      unreachable("how did you even manage this?");
 
    return false;
 }

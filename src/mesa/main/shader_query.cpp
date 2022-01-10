@@ -61,6 +61,41 @@ DECL_RESOURCE_FUNC(XFV, gl_transform_feedback_varying_info);
 DECL_RESOURCE_FUNC(XFB, gl_transform_feedback_buffer);
 DECL_RESOURCE_FUNC(SUB, gl_subroutine_function);
 
+static GLenum
+mediump_to_highp_type(GLenum type)
+{
+   switch (type) {
+   case GL_FLOAT16_NV:
+      return GL_FLOAT;
+   case GL_FLOAT16_VEC2_NV:
+      return GL_FLOAT_VEC2;
+   case GL_FLOAT16_VEC3_NV:
+      return GL_FLOAT_VEC3;
+   case GL_FLOAT16_VEC4_NV:
+      return GL_FLOAT_VEC4;
+   case GL_FLOAT16_MAT2_AMD:
+      return GL_FLOAT_MAT2;
+   case GL_FLOAT16_MAT3_AMD:
+      return GL_FLOAT_MAT3;
+   case GL_FLOAT16_MAT4_AMD:
+      return GL_FLOAT_MAT4;
+   case GL_FLOAT16_MAT2x3_AMD:
+      return GL_FLOAT_MAT2x3;
+   case GL_FLOAT16_MAT2x4_AMD:
+      return GL_FLOAT_MAT2x4;
+   case GL_FLOAT16_MAT3x2_AMD:
+      return GL_FLOAT_MAT3x2;
+   case GL_FLOAT16_MAT3x4_AMD:
+      return GL_FLOAT_MAT3x4;
+   case GL_FLOAT16_MAT4x2_AMD:
+      return GL_FLOAT_MAT4x2;
+   case GL_FLOAT16_MAT4x3_AMD:
+      return GL_FLOAT_MAT4x3;
+   default:
+      return type;
+   }
+}
+
 static void
 bind_attrib_location(struct gl_context *ctx,
                      struct gl_shader_program *const shProg, GLuint index,
@@ -374,12 +409,6 @@ _mesa_GetFragDataIndex(GLuint program, const GLchar *name)
    if (!name)
       return -1;
 
-   if (strncmp(name, "gl_", 3) == 0) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glGetFragDataIndex(illegal name)");
-      return -1;
-   }
-
    /* Not having a fragment shader is not an error.
     */
    if (shProg->_LinkedShaders[MESA_SHADER_FRAGMENT] == NULL)
@@ -408,12 +437,6 @@ _mesa_GetFragDataLocation(GLuint program, const GLchar *name)
 
    if (!name)
       return -1;
-
-   if (strncmp(name, "gl_", 3) == 0) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glGetFragDataLocation(illegal name)");
-      return -1;
-   }
 
    /* Not having a fragment shader is not an error.
     */
@@ -670,7 +693,7 @@ _mesa_program_resource_find_name(struct gl_shader_program *shProg,
             if (name[baselen] == '.') {
                return res;
             }
-            /* fall-through */
+            FALLTHROUGH;
          case GL_PROGRAM_INPUT:
          case GL_PROGRAM_OUTPUT:
             if (name[baselen] == '\0') {
@@ -1064,7 +1087,7 @@ program_resource_location(struct gl_program_resource *res, unsigned array_index)
           RESOURCE_UNI(res)->atomic_buffer_index != -1)
          return -1;
 
-      /* fallthrough */
+      FALLTHROUGH;
    case GL_VERTEX_SUBROUTINE_UNIFORM:
    case GL_GEOMETRY_SUBROUTINE_UNIFORM:
    case GL_FRAGMENT_SUBROUTINE_UNIFORM:
@@ -1372,13 +1395,16 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       case GL_UNIFORM:
       case GL_BUFFER_VARIABLE:
          *val = RESOURCE_UNI(res)->type->gl_type;
+         *val = mediump_to_highp_type(*val);
          return 1;
       case GL_PROGRAM_INPUT:
       case GL_PROGRAM_OUTPUT:
          *val = RESOURCE_VAR(res)->type->gl_type;
+         *val = mediump_to_highp_type(*val);
          return 1;
       case GL_TRANSFORM_FEEDBACK_VARYING:
          *val = RESOURCE_XFV(res)->Type;
+         *val = mediump_to_highp_type(*val);
          return 1;
       default:
          goto invalid_operation;
@@ -1453,7 +1479,7 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
    case GL_REFERENCED_BY_COMPUTE_SHADER:
       if (!_mesa_has_compute_shaders(ctx))
          goto invalid_enum;
-      /* fallthrough */
+      FALLTHROUGH;
    case GL_REFERENCED_BY_VERTEX_SHADER:
    case GL_REFERENCED_BY_TESS_CONTROL_SHADER:
    case GL_REFERENCED_BY_TESS_EVALUATION_SHADER:
@@ -1913,7 +1939,7 @@ _mesa_create_program_resource_hash(struct gl_shader_program *shProg)
 {
    /* Rebuild resource hash. */
    if (shProg->data->ProgramResourceHash)
-      _mesa_hash_table_u64_destroy(shProg->data->ProgramResourceHash, NULL);
+      _mesa_hash_table_u64_destroy(shProg->data->ProgramResourceHash);
 
    shProg->data->ProgramResourceHash = _mesa_hash_table_u64_create(shProg);
 

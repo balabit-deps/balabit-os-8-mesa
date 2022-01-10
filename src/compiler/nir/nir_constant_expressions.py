@@ -68,8 +68,6 @@ template = """\
 #include "util/bigmath.h"
 #include "nir_constant_expressions.h"
 
-#define MAX_UINT_FOR_SIZE(bits) (UINT64_MAX >> (64 - (bits)))
-
 /**
  * \brief Checks if the provided value is a denorm and flushes it to zero.
  */
@@ -459,6 +457,11 @@ struct ${type}${width}_vec {
 </%def>
 
 % for name, op in sorted(opcodes.items()):
+% if op.name == "fsat":
+#if defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+#pragma optimize("", off) /* Temporary work-around for MSVC compiler bug, present in VS2019 16.9.2 */
+#endif
+% endif
 static void
 evaluate_${name}(nir_const_value *_dst_val,
                  UNUSED unsigned num_components,
@@ -482,6 +485,11 @@ evaluate_${name}(nir_const_value *_dst_val,
       ${evaluate_op(op, 0, execution_mode)}
    % endif
 }
+% if op.name == "fsat":
+#if defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
+#pragma optimize("", on) /* Temporary work-around for MSVC compiler bug, present in VS2019 16.9.2 */
+#endif
+% endif
 % endfor
 
 void

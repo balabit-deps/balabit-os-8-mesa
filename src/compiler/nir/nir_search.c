@@ -368,7 +368,7 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
       case nir_type_uint:
       case nir_type_bool: {
          unsigned bit_size = nir_src_bit_size(instr->src[src].src);
-         uint64_t mask = bit_size == 64 ? UINT64_MAX : (1ull << bit_size) - 1;
+         uint64_t mask = u_uintN_max(bit_size);
          for (unsigned i = 0; i < num_components; ++i) {
             uint64_t val = nir_src_comp_as_uint(instr->src[src].src,
                                                 new_swizzle[i]);
@@ -793,7 +793,7 @@ nir_replace_instr(nir_builder *build, nir_alu_instr *instr,
    /* Rewrite the uses of the old SSA value to the new one, and recurse
     * through the uses updating the automaton's state.
     */
-   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(ssa_val));
+   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, ssa_val);
    nir_algebraic_update_automaton(ssa_val->parent_instr, algebraic_worklist,
                                   states, pass_op_table);
 

@@ -1,3 +1,162 @@
+mesa (21.2.6-0ubuntu0.1~20.04.1) focal; urgency=medium
+
+  * Backport to focal. (LP: #1949553)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 10 Jan 2022 10:28:45 +0200
+
+mesa (21.2.6-0ubuntu0.1) impish; urgency=medium
+
+  * New bugfix release. (LP: #1956915)
+    - Enable llvm for riscv64 still, to avoid installation issues
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 10 Jan 2022 10:15:10 +0200
+
+mesa (21.2.6-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 25 Nov 2021 16:07:58 +0200
+
+mesa (21.2.5-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 03 Nov 2021 11:35:38 +0200
+
+mesa (21.2.4-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 18 Oct 2021 16:50:42 +0300
+
+mesa (21.2.3-2) unstable; urgency=medium
+
+  * Revert back to llvm 12. (Closes: #995835)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 07 Oct 2021 12:30:07 +0300
+
+mesa (21.2.3-1) unstable; urgency=medium
+
+  [ Timo Aaltonen ]
+  * New upstream release.
+  * rules: Build with -O2 for ppc64el.
+  * Build with llvm 13.
+
+  [ Aurelien Jarno ]
+  * Disable LLVM support on riscv64, it doesn't have JIT. (Closes: #995618)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 04 Oct 2021 15:18:27 +0300
+
+mesa (21.2.2-1ubuntu1) impish; urgency=medium
+
+  * Merge from Debian.
+    - use -O2 for ppc64el
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 28 Sep 2021 10:35:10 +0300
+
+mesa (21.2.2-1) unstable; urgency=medium
+
+  * New upstream release.
+  * control: Add riscv64 to mesa-opencl-icd archs. (LP: #1942764)
+  * control: Drop libxdamage-dev from build-depends. (Closes: #979515)
+  * 0001-util-format-NEON-is-not-available-with-the-soft-floa.patch:
+    Dropped, upstream.
+  * control: Bump libdrm-dev build-dep.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 22 Sep 2021 14:33:55 +0300
+
+mesa (21.2.1-2ubuntu2) impish; urgency=medium
+
+  * Revert previous change and use -O2 for ppc64el.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 15 Sep 2021 18:29:13 +0300
+
+mesa (21.2.1-2ubuntu1) impish; urgency=medium
+
+  * Attempt to fix mutter test on ppc64el by reverting a commit touching
+    swrast driver preference.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 02 Sep 2021 18:31:34 +0300
+
+mesa (21.2.1-2) unstable; urgency=medium
+
+  [ Adrian Bunk ]
+  * Fix armel FTBFS
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Wed, 01 Sep 2021 14:02:18 +0300
+
+mesa (21.2.1-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 20 Aug 2021 11:38:23 +0300
+
+mesa (21.2.0-1) experimental; urgency=medium
+
+  * New upstream release. (LP: #1937988)
+  * iris-avoid-abort-if-enomem.diff: Dropped, upstream.
+  * control: Bump libdrm-dev build-dependency to 2.4.107.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 05 Aug 2021 09:48:22 +0300
+
+mesa (21.1.6-1) experimental; urgency=medium
+
+  * New upstream release.
+  * fix-ftbfs.diff: Dropped, fixed upstream.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 03 Aug 2021 13:10:20 +0300
+
+mesa (21.1.4-1) experimental; urgency=medium
+
+  * New upstream release.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 02 Jul 2021 16:26:26 +0300
+
+mesa (21.1.2-1) experimental; urgency=medium
+
+  * New upstream release.
+  * iris-avoid-abort-if-enomem.diff: Don't abort when out of memory.
+    (LP: #1918855)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 18 Jun 2021 14:33:09 +0300
+
+mesa (21.1.0-4) experimental; urgency=medium
+
+  * fix-ftbfs.diff: Fix build on armel/armhf/mipsel.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Mon, 17 May 2021 10:38:04 +0300
+
+mesa (21.1.0-3) experimental; urgency=medium
+
+  * rules: Drop the rule to clean up vulkan headers, not needed anymore.
+  * rules: Update vulkan layer option selection.
+  * libgbm1.symbols: Updated.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 06 May 2021 20:25:50 +0300
+
+mesa (21.1.0-2) experimental; urgency=medium
+
+  * control: Bump libdrm-dev build-dep.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 06 May 2021 16:46:12 +0300
+
+mesa (21.1.0-1) experimental; urgency=medium
+
+  * New upstream release.
+  * Build with llvm-12.
+  * path_max.diff: Refreshed.
+  * rules: vulkan_intel.h is gone.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 06 May 2021 16:05:12 +0300
+
+mesa (21.0.3-1) experimental; urgency=medium
+
+  * New upstream release.
+  * rules: Limit d3d12 by DEB_HOST_ARCH, not DEB_HOST_ARCH_CPU. (Closes:
+    #986660)
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 22 Apr 2021 10:01:11 +0300
+
 mesa (21.0.3-0ubuntu0.3~20.04.5) focal; urgency=medium
 
   * Add support for AMD Beige Goby. (LP: #1952083)
@@ -53,6 +212,13 @@ mesa (21.0.3-0ubuntu0.1) hirsute; urgency=medium
     (LP: #1918855)
 
  -- Timo Aaltonen <tjaalton@debian.org>  Fri, 18 Jun 2021 15:42:20 +0300
+
+mesa (21.0.2-1) experimental; urgency=medium
+
+  * New upstream release.
+  * drisw-move-zink-down.diff: Dropped, upstream.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 08 Apr 2021 13:57:35 +0300
 
 mesa (21.0.1-2) experimental; urgency=medium
 
