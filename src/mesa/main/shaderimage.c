@@ -495,7 +495,7 @@ _mesa_is_image_unit_valid(struct gl_context *ctx, struct gl_image_unit *u)
    if (!tex_format)
       return GL_FALSE;
 
-   switch (t->ImageFormatCompatibilityType) {
+   switch (t->Attrib.ImageFormatCompatibilityType) {
    case GL_IMAGE_FORMAT_COMPATIBILITY_BY_SIZE:
       if (_mesa_get_format_bytes(tex_format) !=
           _mesa_get_format_bytes(u->_ActualFormat))
@@ -588,7 +588,7 @@ bind_image_texture(struct gl_context *ctx, struct gl_texture_object *texObj,
 
    u = &ctx->ImageUnits[unit];
 
-   FLUSH_VERTICES(ctx, 0);
+   FLUSH_VERTICES(ctx, 0, 0);
    ctx->NewDriverState |= ctx->DriverFlags.NewImageUnits;
 
    set_image_binding(u, texObj, level, layered, layer, access, format);
@@ -641,11 +641,10 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
        * so those are excluded from this requirement.
        *
        * Additionally, issue 10 of the OES_EGL_image_external_essl3 spec
-       * states that glBindImageTexture must accept external textures.
+       * states that glBindImageTexture must accept external texture objects.
        */
-      if (_mesa_is_gles(ctx) && !texObj->Immutable &&
-          texObj->Target != GL_TEXTURE_BUFFER &&
-          texObj->Target != GL_TEXTURE_EXTERNAL_OES) {
+      if (_mesa_is_gles(ctx) && !texObj->Immutable && !texObj->External &&
+          texObj->Target != GL_TEXTURE_BUFFER) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glBindImageTexture(!immutable)");
          return;
@@ -687,7 +686,7 @@ bind_image_textures(struct gl_context *ctx, GLuint first, GLuint count,
    int i;
 
    /* Assume that at least one binding will be changed */
-   FLUSH_VERTICES(ctx, 0);
+   FLUSH_VERTICES(ctx, 0, 0);
    ctx->NewDriverState |= ctx->DriverFlags.NewImageUnits;
 
    /* Note that the error semantics for multi-bind commands differ from
