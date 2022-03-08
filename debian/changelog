@@ -1,3 +1,9 @@
+mesa (21.2.6-0ubuntu0.1~20.04.2) focal-security; urgency=medium
+
+  * No-change rebuild for the -security pocket. (LP: #1963751)
+
+ -- Marc Deslauriers <marc.deslauriers@ubuntu.com>  Tue, 08 Mar 2022 11:37:17 -0500
+
 mesa (21.2.6-0ubuntu0.1~20.04.1) focal; urgency=medium
 
   * Backport to focal. (LP: #1949553)
